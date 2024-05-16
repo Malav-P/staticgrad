@@ -18,7 +18,7 @@ SOURCES = src/classes.cpp
 
 .PHONY: all clean run leaks
 
-all: att add layernorm matmul softmax encoder
+all: att add layernorm matmul softmax encoder transformerblock
 
 att: test/att_test.cpp $(SOURCES)
 	g++ $(CXXFLAGS) -o $(BIN_DIR)/att_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
@@ -38,6 +38,9 @@ softmax: test/softmax_test.cpp $(SOURCES)
 encoder: test/encoder_test.cpp $(SOURCES)
 	g++ $(CXXFLAGS) -o $(BIN_DIR)/encoder_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
 
+transformerblock: test/transformerblock_test.cpp $(SOURCES)
+	g++ $(CXXFLAGS) -o $(BIN_DIR)/transformerblock_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
+
 clean:
 	rm -f $(BIN_DIR)/*
 	clear
@@ -49,6 +52,7 @@ run: all
 	./$(BIN_DIR)/matmul_test
 	./$(BIN_DIR)/softmax_test
 	./$(BIN_DIR)/encoder_test
+	./$(BIN_DIR)/transformerblock_test
 
 leaks: all
 	leaks --atExit -- ./$(BIN_DIR)/att_test
@@ -56,3 +60,4 @@ leaks: all
 	leaks --atExit -- ./$(BIN_DIR)/layernorm_test
 	leaks --atExit -- ./$(BIN_DIR)/matmul_test
 	leaks --atExit -- ./$(BIN_DIR)/encoder_test
+	leaks --atExit -- ./$(BIN_DIR)/transformerblock_test

@@ -335,8 +335,23 @@ class TransformerBlock : public Operation {
                 layer_grad += C;
 
                 res2 = new Add();
-
             }
+
+        ~TransformerBlock(){
+            delete res2;
+            delete ra4; delete mat4;
+            delete gelu;
+            delete ra3; delete mat3;
+            delete ln2;
+            delete res1;
+            delete ra2; delete mat2;
+            delete att;
+            delete ra1; delete mat1;
+            delete ln1;
+
+            delete res1_node;
+            delete res2_node;
+        }
 
         
         void forward(Node* out, Node* in) override;

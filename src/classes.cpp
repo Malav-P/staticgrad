@@ -492,6 +492,10 @@ void LayerNorm::forward(Node* out, Node* in) { // (B, T, C) -> (B, T, C)
             }
             v = v/C;
 
+            if (std::abs(v) < eps) {
+                std::cerr << "Variance in layernorm close to zero." << std::endl;
+            }
+
             // write to output
             float* out_ = out->act + b*T*C + t*C;
             float rstd_ = 1.0f / sqrtf(v+ eps);
