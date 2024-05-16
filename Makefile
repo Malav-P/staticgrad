@@ -1,32 +1,58 @@
-.PHONY: all clean
-all: matmul columnadd transmatmul softmax
+# Compiler flags
+CXXFLAGS = -std=c++17 -framework Accelerate -DACCELERATE_NEW_LAPACK
 
-matmul:
-	g++ -std=c++17 -o bin/testmatmul test/test.cpp src/classes.cpp -framework Accelerate -DACCELERATE_NEW_LAPACK -I./
+# Library directories
+LIB_DIRS = -L/opt/homebrew/lib
 
-columnadd:
-	g++ -std=c++17 -o bin/testcolumnadd test/testcolumnadd.cpp src/classes.cpp -framework Accelerate -DACCELERATE_NEW_LAPACK -I./
+# Libraries to link against
+LIBS = -lgtest -lgtest_main -pthread
 
-transmatmul:
-	g++ -std=c++17 -o bin/testransmatmul test/testransmatmul.cpp src/classes.cpp -framework Accelerate -DACCELERATE_NEW_LAPACK -I./
+# Include dirs
+INCLUDE_DIRS = -I./ -I/opt/homebrew/include/
 
-softmax:
-	g++ -std=c++17 -o bin/testsoftmax test/testsoftmax.cpp src/classes.cpp -framework Accelerate -DACCELERATE_NEW_LAPACK -I./
+# Binary directory
+BIN_DIR = bin
 
+# Source files
+SOURCES = src/classes.cpp
+
+.PHONY: all clean run leaks
+
+all: att add layernorm matmul softmax encoder
+
+att: test/att_test.cpp $(SOURCES)
+	g++ $(CXXFLAGS) -o $(BIN_DIR)/att_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
+
+add: test/add_test.cpp $(SOURCES)
+	g++ $(CXXFLAGS) -o $(BIN_DIR)/add_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
+
+layernorm: test/layernorm_test.cpp $(SOURCES)
+	g++ $(CXXFLAGS) -o $(BIN_DIR)/layernorm_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
+
+matmul: test/matmul_test.cpp $(SOURCES)
+	g++ $(CXXFLAGS) -o $(BIN_DIR)/matmul_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
+
+softmax: test/softmax_test.cpp $(SOURCES)
+	g++ $(CXXFLAGS) -o $(BIN_DIR)/softmax_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
+
+encoder: test/encoder_test.cpp $(SOURCES)
+	g++ $(CXXFLAGS) -o $(BIN_DIR)/encoder_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
 
 clean:
-	rm -f bin/*
+	rm -f $(BIN_DIR)/*
 	clear
 
 run: all
-	./bin/testmatmul
-	./bin/testcolumnadd
-	./bin/testransmatmul
-	./bin/testsoftmax
-
+	./$(BIN_DIR)/att_test
+	./$(BIN_DIR)/add_test
+	./$(BIN_DIR)/layernorm_test
+	./$(BIN_DIR)/matmul_test
+	./$(BIN_DIR)/softmax_test
+	./$(BIN_DIR)/encoder_test
 
 leaks: all
-	leaks --atExit -- ./bin/testmatmul
-	leaks --atExit -- ./bin/testcolumnadd
-	leaks --atExit -- ./bin/testransmatmul
-	leaks --atExit -- ./bin/testsoftmax
+	leaks --atExit -- ./$(BIN_DIR)/att_test
+	leaks --atExit -- ./$(BIN_DIR)/add_test
+	leaks --atExit -- ./$(BIN_DIR)/layernorm_test
+	leaks --atExit -- ./$(BIN_DIR)/matmul_test
+	leaks --atExit -- ./$(BIN_DIR)/encoder_test

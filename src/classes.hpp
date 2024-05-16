@@ -7,8 +7,11 @@
 
 class Tensor  {
     public:
-        Tensor(std::vector<size_t> shape_, std::shared_ptr<float[]> values_):
+        Tensor(std::vector<size_t> shape_, float* values_):
             values(values_),
+            own_values(false),
+            grad(nullptr),
+            own_grad(false),
             shape(shape_) {
                 size_t numel = 1;
 
@@ -16,13 +19,16 @@ class Tensor  {
                     numel *= element;
                 }
 
-                grad = std::shared_ptr<float[]>(new float[numel]);
+                grad = new float[numel];
+                own_grad = true;
                 size = sizeof(float) * numel;               
             }
         
-        explicit Tensor(std::vector<size_t> shape_):
-            values(nullptr),
-            grad(nullptr),
+        Tensor(std::vector<size_t> shape_, float* params_, float* grad_):
+            values(params_),
+            grad(grad_),
+            own_values(false),
+            own_grad(false),
             shape(shape_) {
                 size_t numel = 1;
 
@@ -30,132 +36,309 @@ class Tensor  {
                     numel *= element;
                 }
 
-                values = std::shared_ptr<float[]>(new float[numel]);
-                grad = std::shared_ptr<float[]>(new float[numel]); 
+                size = sizeof(float) * numel;    
+            }
+
+        
+        explicit Tensor(std::vector<size_t> shape_, bool use_grad = true):
+            values(nullptr),
+            grad(nullptr),
+            own_values(false),
+            own_grad(false),
+            shape(shape_) {
+                size_t numel = 1;
+
+                for (size_t element : shape_) {
+                    numel *= element;
+                }
+
+                values = new float[numel];
+                own_values =  true;
+
+                if (use_grad){
+                    grad = new float[numel];
+                    own_grad = true;
+                }
+                else {
+                    grad = nullptr;
+                }
+                
                 size = sizeof(float) * numel;
             }
 
-        ~Tensor(){}
+        ~Tensor(){
+            if (own_values){delete values;}
+            if (own_grad){delete grad;}
+        }
 
         void reset_values(){
-            memset(this->values.get(), 0.0, size);
+            memset(this->values, 0.0, size);
         }
 
         void reset_grad(){
-            memset(this->grad.get(), 0.0, size);
+            memset(this->grad, 0.0, size);
         }
 
-        std::shared_ptr<float[]> values;
-        std::shared_ptr<float[]> grad;
+        float* values;
+        float* grad;
+        bool own_values;
+        bool own_grad;
         std::vector<size_t> shape;
         size_t size; // in bytes
 
 };
 
 
-
 class Node {
     public:
-        std::shared_ptr<Tensor> data;
 
-        explicit Node(std::vector<size_t> shape_):
-            data(nullptr)
-            {
-                data = std::shared_ptr<Tensor>(new Tensor(shape_));
-            }
+        float* act;
+        float* act_grads;
+
+        std::vector<size_t> shape;
+        size_t size; // number of elements
+
+
+        Node():
+            act(nullptr),
+            act_grads(nullptr),
+            shape({0}){}
 
         ~Node(){}
 };
 
 class Operation {
     public :
-        Operation(std::vector<Node*> in, Node* out):
-            inputs(in),
-            output(out) {}
+        Operation(float* params_, float* grad_):
+            params(params_),
+            grad(grad_) {}
 
-        std::vector<Node*> inputs;
-        Node* output;
+        float* params;
+        float* grad;
 
         virtual ~Operation() {}
 
-        virtual void forward() = 0;
-        virtual void backward() = 0;
+        virtual void forward(Node* out, Node* in) = 0;
+        virtual void backward(Node* out, Node* in) = 0;
 
-        virtual std::vector<size_t> output_shape() = 0;
+};
 
+class Encoder: public Operation {
+    public:
+        size_t vocab_size;
+        size_t C;
+
+        Encoder(float* params_, float* grad_, size_t C_, size_t vocab_size_ = 50257):
+            vocab_size(vocab_size_),
+            C(C_),
+            Operation(params_, grad_) {}
+
+        void forward(Node* out, Node* in) override;
+        void backward(Node* out, Node* in) override;
+};
+
+class GELU : public Operation {
+    public :
+
+        GELU():
+            Operation(nullptr, nullptr){}
+
+        void forward(Node* out, Node* in) override;
+        void backward(Node* out, Node* in) override;
+};
+
+class LayerNorm : public Operation {
+    public:
+
+        float* rstd;
+        float* m; 
+    
+
+        LayerNorm(float* params_, float* grad_):
+        rstd(nullptr),
+        m(nullptr),
+        Operation(params_, grad_) {}
+
+        void forward(Node* out, Node* in) override;
+        void backward(Node* out, Node* in) override;
+
+
+        ~LayerNorm(){
+            delete[] rstd;
+            delete[] m;
+        }
 };
 
 class Matmul : public Operation {
     public :
-
-        bool transpose_A;
-        bool transpose_B;
         float multiplier;
         
-        Matmul(Node* C, Node* A, Node* B, bool trans_A = false, bool trans_B = false, float multiplier_ = 1.0):
-            transpose_A(trans_A),
-            transpose_B(trans_B),
+        Matmul(float* params_, float* grad_, float multiplier_ = 1.0):
             multiplier(multiplier_),
-            Operation(std::vector<Node*>{A,B}, C) {
+            Operation(params_, grad_) {
+                // ASSUME in is shape (B,T,C)
                 // TODO : checks to ensure matrix dimenions agree.
+
             }
         
 
-        void forward() override;
-        void backward() override;
+        void forward(Node* out, Node* in) override;
+        void backward(Node* out, Node* in) override;
 
-        std::vector<size_t> output_shape() override;
 };
+
+class Attention : public Operation {
+    public:
+        size_t num_heads;
+        float* buffer;
+        float* dbuffer;
+
+        Attention(size_t num_heads_):
+            Operation(nullptr, nullptr),
+            num_heads(num_heads_),
+            buffer(nullptr) {
+                buffer = new float[2*1024]; // max seq len
+                dbuffer = new float[2*1024];
+            }
+
+        ~Attention(){
+            delete[] buffer;
+            delete[] dbuffer;
+        }
+
+        void forward(Node* out, Node* in) override;
+        void backward(Node* out, Node* in) override;
+};
+
 
 class Add : public Operation {
     public :
-        size_t numel;
 
-        template<class... T>
-        Add(Node* out, T... args):
-            Operation({args...}, out){
-                size_t tensor_size = this->inputs[0]->data->size;
-                numel = size_t(tensor_size / sizeof(float));
-                for (Node* node : this->inputs){
-                    if (node->data->size != tensor_size){
-                        throw std::logic_error("Sizes of operands not equal!");
-                    }
-                }
-            }
+        Add():
+            Operation(nullptr, nullptr){}
         
-        void forward() override;
-        void backward() override;
+        void forward(Node* out, Node* in) override;
+        void backward(Node* out, Node* in) override;
 
-        std::vector<size_t> output_shape() override;
 };
 
-class ColumnAdd : public Operation {
+class Softmax : public Operation {
+    public:
+
+        Softmax():
+            Operation(nullptr, nullptr){}
+
+        void forward(Node* out, Node* in) override;
+        void backward(Node* out, Node* in) override;
+
+};
+
+class RowAdd : public Operation {
     public :
-        ColumnAdd(Node* C, Node* A, Node* B):
-            Operation(std::vector<Node*>{A,B}, C) {
-                if (B->data->shape[0] != A->data->shape[0]){
-                    throw std::logic_error("Sizes of ColumnAdd operation are incompatible");
-                }
-            }
+        RowAdd(float* params_, float* grad_):
+            Operation(params_, grad_) { }
 
-        void forward() override;
-        void backward() override;
+        void forward(Node* out, Node* in) override;
+        void backward(Node* out, Node* in) override;
 
-        std::vector<size_t> output_shape() override;
 };
 
-class SoftMax : public Operation {
-    public : 
-        SoftMax(Node* B, Node* A):
-            Operation(std::vector<Node*>{A}, B) {
-                if (A->data->shape.size() != 2){
-                    throw std::logic_error("Size of input tensor is not 2, SoftMax Operation cannot be done on this tensor.");
+
+
+
+class TransformerBlock : public Operation {
+    public:
+
+        Node* res1_node;
+        Node* res2_node;
+
+        LayerNorm* ln1;
+        Matmul* mat1;
+        RowAdd* ra1;
+
+        Attention* att;
+
+        Matmul* mat2;
+        RowAdd* ra2;
+
+        Add* res1;
+        LayerNorm* ln2;
+        Matmul* mat3;
+        RowAdd* ra3;
+        GELU* gelu;
+        Matmul* mat4;
+        RowAdd* ra4;
+        Add* res2;
+
+        TransformerBlock(float* params_, float* grad_, size_t C, size_t NH):
+            Operation(params_, grad_),
+            res1_node(nullptr),
+            res2_node(nullptr) {
+
+                if (C % NH != 0){
+                    throw std::invalid_argument("C must be divisible by NH");
                 }
+
+                res1_node = new Node();
+                res2_node = new Node();
+
+                float* layer_param = params_;
+                float* layer_grad = grad_;
+
+
+                ln1 = new LayerNorm(layer_param, layer_grad);
+                layer_param += C + C;
+                layer_grad += C + C;
+
+
+                mat1 = new Matmul(layer_param, layer_grad);
+                layer_param += C * 3*C;
+                layer_grad +=  C * 3*C;
+
+
+                ra1 = new RowAdd(layer_param, layer_grad);
+                layer_param += 3*C;
+                layer_grad += 3*C;
+
+                att = new Attention(NH);
+
+                mat2 = new Matmul(layer_param, layer_grad);
+                layer_param += C*C;
+                layer_grad +=  C*C;
+
+                ra2 = new RowAdd(layer_param, layer_grad);
+                layer_param += C;
+                layer_grad += C;
+
+                res1 = new Add();
+
+                ln2 = new LayerNorm(layer_param, layer_grad);
+                layer_param += C + C;
+                layer_grad += C + C;
+
+                mat3 = new Matmul(layer_param, layer_grad);
+                layer_param += C * 4*C;
+                layer_grad += C * 4*C;
+
+                ra3 = new RowAdd(layer_param, layer_grad);
+                layer_param += 4*C;
+                layer_grad += 4*C;
+
+                gelu = new GELU();
+
+                mat4 = new Matmul(layer_param, layer_grad);
+                layer_param += 4*C * C;
+                layer_grad += 4*C * C;
+
+                ra4 = new RowAdd(layer_param, layer_grad);
+                layer_param += C;
+                layer_grad += C;
+
+                res2 = new Add();
+
             }
 
-        void forward() override;
-        void backward() override;
-
-        std::vector<size_t> output_shape() override {return inputs[0]->data->shape;}
+        
+        void forward(Node* out, Node* in) override;
+        void backward(Node* out, Node* in) override;
 };
-
