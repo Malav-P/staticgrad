@@ -29,6 +29,7 @@ class TransformerBlockTest : public ::testing::Test {
 		B = 2;
 		T = 3;
 		C = 768;
+		maxT = 1024;
 
 		activations = new float[17*B*T*C];
 		activations_grad = new float[17*B*T*C];
@@ -63,6 +64,7 @@ class TransformerBlockTest : public ::testing::Test {
 	size_t B;
 	size_t T;
 	size_t C;
+	size_t maxT;
 	Node* in;
 	Node* out;
 	float* activations;
@@ -73,16 +75,17 @@ class TransformerBlockTest : public ::testing::Test {
 
 TEST_F(TransformerBlockTest, InvalidNumHeads) {
 	size_t num_heads = 11; // 768 is not divisible by 11
-	EXPECT_THROW(TransformerBlock* tblock = new TransformerBlock(params, params_grad, C, num_heads), std::invalid_argument);
+	EXPECT_THROW(TransformerBlock* tblock = new TransformerBlock(params, params_grad, C, num_heads, maxT), std::invalid_argument);
 
 	num_heads = 0; // 768 is not divisible by 0
-	EXPECT_THROW(TransformerBlock* tblock = new TransformerBlock(params, params_grad, C, num_heads), std::invalid_argument);
+	EXPECT_THROW(TransformerBlock* tblock = new TransformerBlock(params, params_grad, C, num_heads, maxT), std::invalid_argument);
 
 }
 
+
 TEST_F(TransformerBlockTest, WarnSmallVariance) {
 	size_t num_heads = 12;
-	TransformerBlock* tblock = new TransformerBlock(params, params_grad, C, num_heads);
+	TransformerBlock* tblock = new TransformerBlock(params, params_grad, C, num_heads, maxT);
 	fillArrayWithZero(in->act, in->size);
 
 	testing::internal::CaptureStderr();
@@ -99,7 +102,7 @@ TEST_F(TransformerBlockTest, WarnSmallVariance) {
 
 TEST_F(TransformerBlockTest, ForwardPass) {
 	size_t num_heads = 12;
-	TransformerBlock* tblock = new TransformerBlock(params, params_grad, C, num_heads);
+	TransformerBlock* tblock = new TransformerBlock(params, params_grad, C, num_heads, maxT);
 
 	fillArrayWithRandom(in->act, in->size);
 
@@ -116,7 +119,7 @@ TEST_F(TransformerBlockTest, ForwardPass) {
 
 TEST_F(TransformerBlockTest, DoubleForward) {
 	size_t num_heads = 12;
-	TransformerBlock* tblock = new TransformerBlock(params, params_grad, C, num_heads);
+	TransformerBlock* tblock = new TransformerBlock(params, params_grad, C, num_heads, maxT);
 	fillArrayWithRandom(in->act, in->size);
 
 	tblock->forward(out, in);
@@ -139,7 +142,7 @@ TEST_F(TransformerBlockTest, DoubleForward) {
 
 TEST_F(TransformerBlockTest, ParameterAllocation) {
 	size_t num_heads = 12;
-	TransformerBlock* tblock = new TransformerBlock(params, params_grad, C, num_heads);
+	TransformerBlock* tblock = new TransformerBlock(params, params_grad, C, num_heads, maxT);
 
 	// first layernorm
 	EXPECT_EQ(tblock->mat1->params - tblock->ln1->params, 2*C);

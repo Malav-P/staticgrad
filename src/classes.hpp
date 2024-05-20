@@ -1,3 +1,6 @@
+#ifndef CLASSES_HPP
+#define CLASSES_HPP
+
 #include <vector>
 #include <set>
 #include <stdexcept>
@@ -128,7 +131,7 @@ class Encoder: public Operation {
         size_t vocab_size;
         size_t C;
 
-        Encoder(float* params_, float* grad_, size_t C_, size_t vocab_size_ = 50257):
+        Encoder(float* params_, float* grad_, size_t C_, size_t vocab_size_):
             vocab_size(vocab_size_),
             C(C_),
             Operation(params_, grad_) {}
@@ -193,12 +196,12 @@ class Attention : public Operation {
         float* buffer;
         float* dbuffer;
 
-        Attention(size_t num_heads_):
+        Attention(size_t num_heads_, size_t maxT):
             Operation(nullptr, nullptr),
             num_heads(num_heads_),
             buffer(nullptr) {
-                buffer = new float[2*1024]; // max seq len
-                dbuffer = new float[2*1024];
+                buffer = new float[2*maxT]; // max seq len
+                dbuffer = new float[2*maxT];
             }
 
         ~Attention(){
@@ -270,7 +273,7 @@ class TransformerBlock : public Operation {
         RowAdd* ra4;
         Add* res2;
 
-        TransformerBlock(float* params_, float* grad_, size_t C, size_t NH):
+        TransformerBlock(float* params_, float* grad_, size_t C, size_t NH, size_t maxT):
             Operation(params_, grad_),
             res1_node(nullptr),
             res2_node(nullptr) {
@@ -300,7 +303,7 @@ class TransformerBlock : public Operation {
                 layer_param += 3*C;
                 layer_grad += 3*C;
 
-                att = new Attention(NH);
+                att = new Attention(NH, maxT);
 
                 mat2 = new Matmul(layer_param, layer_grad);
                 layer_param += C*C;
@@ -357,3 +360,5 @@ class TransformerBlock : public Operation {
         void forward(Node* out, Node* in) override;
         void backward(Node* out, Node* in) override;
 };
+
+#endif // CLASSES_HPP

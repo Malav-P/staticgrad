@@ -12,6 +12,7 @@ class AttentionTest : public ::testing::Test {
     B = 1;
     T = 1;
     C = 768;
+    maxT = 1024;
 
 
     in = new Node();
@@ -41,6 +42,7 @@ class AttentionTest : public ::testing::Test {
   size_t B;
   size_t T;
   size_t C;
+  size_t maxT;
   Node* in;
   Node* out;
 };
@@ -59,7 +61,7 @@ void fillArrayWithOnes(float* arr, int size) {
 
 TEST_F(AttentionTest, AttFlow) {
   size_t num_heads = 12;
-  Attention* att = new Attention(num_heads);
+  Attention* att = new Attention(num_heads, maxT);
 
   fillArrayWithRandom(in->act, in->size);
 
@@ -78,7 +80,7 @@ TEST_F(AttentionTest, AttFlow) {
 
 TEST_F(AttentionTest, AllOnes) {
   size_t num_heads = 12;
-  Attention* att = new Attention(num_heads);
+  Attention* att = new Attention(num_heads, maxT);
 
   fillArrayWithOnes(in->act, in->size);
 
@@ -93,7 +95,7 @@ TEST_F(AttentionTest, AllOnes) {
 
 TEST_F(AttentionTest, InvalidShapes) {
   size_t num_heads = 12;
-  Attention* att = new Attention(num_heads);
+  Attention* att = new Attention(num_heads, maxT);
 
   in->size = B*T*C;
   EXPECT_THROW(att->forward(out, in), std::invalid_argument);

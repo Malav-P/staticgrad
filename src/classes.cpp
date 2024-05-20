@@ -141,7 +141,6 @@ void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
     mat1->forward(out_internal, in_internal);
     ra1->forward(out_internal, out_internal); // in place
     
-
     // attention
     shift(out_internal, in_internal, {B, T, C});
     att->forward(out_internal, in_internal);
@@ -467,8 +466,11 @@ void LayerNorm::forward(Node* out, Node* in) { // (B, T, C) -> (B, T, C)
     size_t T = in->shape[1];
     size_t C = in->shape[2];
 
-    if (rstd == nullptr) {rstd = new float[B*T];}
-    if (m == nullptr) {m = new float[B*T];}
+
+    delete[] rstd; delete[] m;
+    rstd = new float[B*T];
+    m = new float[B*T];
+
 
     float eps = 1e-5; // division by zero prevention during normalization
 
@@ -584,6 +586,12 @@ void Matmul::forward(Node* out, Node* in) {
     float alpha = multiplier, beta = 0.0f;
     float* B_ = params;
 
+    // for debugging, can remove
+    // for (int i = 0; i < in->size; i++){
+    //     std::cout<< in->act[i] << "\n";
+    // }
+    // std::cout<< B << "," << T << "," << C << "\n";
+
 
     for (size_t b = 0; b < B; b++){
 
@@ -592,7 +600,7 @@ void Matmul::forward(Node* out, Node* in) {
 
         cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                     T, n, C, alpha, A, C, B_, n, beta, out_, n);
-        
+
     }
 }
 
