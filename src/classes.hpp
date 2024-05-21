@@ -8,88 +8,88 @@
 #include <iostream>
 #include <Accelerate/Accelerate.h>
 
-class Tensor  {
-    public:
-        Tensor(std::vector<size_t> shape_, float* values_):
-            values(values_),
-            own_values(false),
-            grad(nullptr),
-            own_grad(false),
-            shape(shape_) {
-                size_t numel = 1;
+// class Tensor  {
+//     public:
+//         Tensor(std::vector<size_t> shape_, float* values_):
+//             values(values_),
+//             own_values(false),
+//             grad(nullptr),
+//             own_grad(false),
+//             shape(shape_) {
+//                 size_t numel = 1;
 
-                for (size_t element : shape_) {
-                    numel *= element;
-                }
+//                 for (size_t element : shape_) {
+//                     numel *= element;
+//                 }
 
-                grad = new float[numel];
-                own_grad = true;
-                size = sizeof(float) * numel;               
-            }
+//                 grad = new float[numel];
+//                 own_grad = true;
+//                 size = sizeof(float) * numel;               
+//             }
         
-        Tensor(std::vector<size_t> shape_, float* params_, float* grad_):
-            values(params_),
-            grad(grad_),
-            own_values(false),
-            own_grad(false),
-            shape(shape_) {
-                size_t numel = 1;
+//         Tensor(std::vector<size_t> shape_, float* params_, float* grad_):
+//             values(params_),
+//             grad(grad_),
+//             own_values(false),
+//             own_grad(false),
+//             shape(shape_) {
+//                 size_t numel = 1;
 
-                for (size_t element : shape_) {
-                    numel *= element;
-                }
+//                 for (size_t element : shape_) {
+//                     numel *= element;
+//                 }
 
-                size = sizeof(float) * numel;    
-            }
+//                 size = sizeof(float) * numel;    
+//             }
 
         
-        explicit Tensor(std::vector<size_t> shape_, bool use_grad = true):
-            values(nullptr),
-            grad(nullptr),
-            own_values(false),
-            own_grad(false),
-            shape(shape_) {
-                size_t numel = 1;
+//         explicit Tensor(std::vector<size_t> shape_, bool use_grad = true):
+//             values(nullptr),
+//             grad(nullptr),
+//             own_values(false),
+//             own_grad(false),
+//             shape(shape_) {
+//                 size_t numel = 1;
 
-                for (size_t element : shape_) {
-                    numel *= element;
-                }
+//                 for (size_t element : shape_) {
+//                     numel *= element;
+//                 }
 
-                values = new float[numel];
-                own_values =  true;
+//                 values = new float[numel];
+//                 own_values =  true;
 
-                if (use_grad){
-                    grad = new float[numel];
-                    own_grad = true;
-                }
-                else {
-                    grad = nullptr;
-                }
+//                 if (use_grad){
+//                     grad = new float[numel];
+//                     own_grad = true;
+//                 }
+//                 else {
+//                     grad = nullptr;
+//                 }
                 
-                size = sizeof(float) * numel;
-            }
+//                 size = sizeof(float) * numel;
+//             }
 
-        ~Tensor(){
-            if (own_values){delete values;}
-            if (own_grad){delete grad;}
-        }
+//         ~Tensor(){
+//             if (own_values){delete values;}
+//             if (own_grad){delete grad;}
+//         }
 
-        void reset_values(){
-            memset(this->values, 0.0, size);
-        }
+//         void reset_values(){
+//             memset(this->values, 0.0, size);
+//         }
 
-        void reset_grad(){
-            memset(this->grad, 0.0, size);
-        }
+//         void reset_grad(){
+//             memset(this->grad, 0.0, size);
+//         }
 
-        float* values;
-        float* grad;
-        bool own_values;
-        bool own_grad;
-        std::vector<size_t> shape;
-        size_t size; // in bytes
+//         float* values;
+//         float* grad;
+//         bool own_values;
+//         bool own_grad;
+//         std::vector<size_t> shape;
+//         size_t size; // in bytes
 
-};
+// };
 
 
 class Node {

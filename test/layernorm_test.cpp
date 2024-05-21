@@ -6,6 +6,11 @@ void fillArrayWithRandom(float* arr, int size) {
     arr[i] = (float)rand() / RAND_MAX; // Generates a random float between 0 and 1
   }
 }
+void fillArrayWithOnes(float* arr, int size) {
+  for (int i = 0; i < size; i++) {
+    arr[i] = 1.0f;
+  }
+}
 
 class LayerNormTest : public ::testing::Test {
  protected:
@@ -26,11 +31,9 @@ class LayerNormTest : public ::testing::Test {
     out->shape = {B, T, C};
     out->size = B * T * C;
 
-    params = new float[C];
-    grad = new float[C];
-
-
-
+    params = new float[C + C];
+    grad = new float[C + C];
+    
     layer_norm = new LayerNorm(params, grad);
   }
 
@@ -60,35 +63,35 @@ class LayerNormTest : public ::testing::Test {
 };
 
 TEST_F(LayerNormTest, ForwardPass) {
-  fillArrayWithRandom(in->act, in->size);
+	fillArrayWithRandom(in->act, in->size);
 
-  for (int i = 0; i<C; i++){
-      layer_norm->params[i] = 1.0f;
-      layer_norm->params[i+C] = 0.0f;
-  }
+	for (int i = 0; i<C; i++){
+		layer_norm->params[i] = 1.0f;
+		layer_norm->params[i+C] = 0.0f;
+	}
 
-  layer_norm->forward(out, in);
+	layer_norm->forward(out, in);
 
 
-  float mean = 0.0f;
+	float mean = 0.0f;
 
-  // calc mean
-  for (int i = 0; i<C; i++){
-    mean += out->act[i];
-  }
-  mean = mean/C;
+	// calc mean
+	for (int i = 0; i<C; i++){
+	mean += out->act[i];
+	}
+	mean = mean/C;
 
-  // calculate var
-  float v = 0.0f;
-  for (size_t i = 0 ; i < C; i++){
-      float dev = out->act[i] - mean;
-      v += dev*dev;
-  }
-  v = v/C;
+	// calculate var
+	float v = 0.0f;
+	for (size_t i = 0 ; i < C; i++){
+		float dev = out->act[i] - mean;
+		v += dev*dev;
+	}
+	v = v/C;
 
-  // Check that the output values are within the expected range
-  EXPECT_NEAR(mean, 0.0f, 1e-5);
-  EXPECT_NEAR(v, 1.0f, 1e-3);
+	// Check that the output values are within the expected range
+	EXPECT_NEAR(mean, 0.0f, 1e-5);
+	EXPECT_NEAR(v, 1.0f, 1e-3);
 }
 
 TEST_F(LayerNormTest, ScaleShift) {
@@ -145,6 +148,50 @@ TEST_F(LayerNormTest, ScaleShift) {
 //   // This should throw an exception or return an error
 //   EXPECT_THROW(layer_norm->forward(out, in), std::invalid_argument);
 // }
+
+TEST_F(LayerNormTest, Backward){
+
+	// do forward pass
+
+	fillArrayWithRandom(in->act, in->size);
+	fillArrayWithRandom(layer_norm->params, 2*C);
+
+	layer_norm->forward(out, in);
+
+	// prepare for backward pass
+
+	fillArrayWithOnes(out->act_grads, out->size);
+
+	std::memset(layer_norm->grad, 0, 2*C*sizeof(float));
+	std::memset(in->act_grads, 0, in->size * sizeof(float));
+
+	layer_norm->backward(out, in);
+
+	// check shift (bias) gradients
+	for (int i = 0; i < C; i++){
+		float expected = 0.0f;
+		for (int b = 0; b < B; b++){
+			for (int t = 0; t < T; t++){
+				expected += out->act_grads[b*T*C + t*C + i];
+			}
+		}
+		EXPECT_FLOAT_EQ(layer_norm->grad[C + i], expected);
+	}
+
+	// TODO Check scale (weight) gradients
+	for (int i = 0; i < C; i++){
+		float expected = 0.0f;
+		for (int b = 0; b < B; b++){
+			for (int t = 0; t < T; t++){
+				expected += out->act_grads[b*T*C + t*C + i] * (in->act[b*T*C + t*C + i] - layer_norm->m[b*T + t]) * layer_norm->rstd[b*T + t];
+			}
+		}
+		EXPECT_FLOAT_EQ(layer_norm->grad[i], expected);
+	}
+
+	// TODO Check input gradients
+
+}
 
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);

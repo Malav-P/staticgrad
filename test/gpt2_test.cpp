@@ -99,14 +99,33 @@ TEST_F(GPT2Test, Forward) {
     // Define the distribution range
     std::uniform_int_distribution<> distrib(lower_bound, upper_bound);
 
-
+    // fill input with random tokens
     for (int i =0; i < B*T; i++){
         in->act[i] = distrib(gen);
     }
 
+    // fill parameters with random values between -1.0 and 1.0
     fillArrayWithRandom(model->params, model->num_params);
 
+    // forward pass should work
     EXPECT_NO_THROW(model->forward(out, in));
+
+    // each array at (b, t) position should sum to one
+    for (int b = 0; b < B; b++){
+        for (int t = 0; t < T; t++){
+            float* probs = out->act + b * T*V + t * V;
+            float sum = 0.0f;
+            for (int v = 0; v < V; v++){
+                float p = probs[v];
+                EXPECT_LE(p, 1.0f);
+                EXPECT_GE(p, 0.0f);
+                sum += p;
+            }
+            EXPECT_NEAR(sum, 1.0f, 1e-5);
+        }
+    }
+
+
 
 }
 

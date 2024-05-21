@@ -566,7 +566,7 @@ void LayerNorm::backward(Node* out, Node* in){
                 // input gradient
                 float dnorm = out_g[i] * w[i];
                 float n = rstd_*(inp[i] - m_);
-                inp[0] += rstd_ * (dnorm - norm_g_mean - norm_g_mean_times_norm * n);
+                in_g[i] += rstd_ * (dnorm - norm_g_mean - norm_g_mean_times_norm * n);
             }
 
         }

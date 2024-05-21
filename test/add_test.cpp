@@ -1,6 +1,18 @@
 #include <gtest/gtest.h>
 #include "src/classes.hpp"
 
+void fillArrayWithRandom(float* arr, int size) {
+  for (int i = 0; i < size; i++) {
+    arr[i] = (float)rand() / RAND_MAX; // Generates a random float between 0 and 1
+  }
+}
+
+void fillArrayWithOnes(float* arr, int size, float multiplier = 1.0f) {
+  for (int i = 0; i < size; i++) {
+    arr[i] = 1.0 * multiplier; // Assigning each element the value 1
+  }
+}
+
 class AddTest : public ::testing::Test {
  protected:
   void SetUp() override {
@@ -38,17 +50,7 @@ class AddTest : public ::testing::Test {
   Node* out;
 };
 
-void fillArrayWithRandom(float* arr, int size) {
-  for (int i = 0; i < size; i++) {
-    arr[i] = (float)rand() / RAND_MAX; // Generates a random float between 0 and 1
-  }
-}
 
-void fillArrayWithOnes(float* arr, int size, float multiplier = 1.0f) {
-  for (int i = 0; i < size; i++) {
-    arr[i] = 1.0 * multiplier; // Assigning each element the value 1
-  }
-}
 
 TEST_F(AddTest, ToArrayofOne) {
   Add* add = new Add();
@@ -87,18 +89,18 @@ TEST_F(AddTest, ToArrayofRandom) {
 }
 
 TEST_F(AddTest, ToArrayofZeros) {
-  Add* add = new Add();
+	Add* add = new Add();
 
-  fillArrayWithRandom(in->act, in->size);
-  fillArrayWithOnes(out->act, out->size, 0.0f); // Fill with zeros instead of ones
+	fillArrayWithRandom(in->act, in->size);
+	fillArrayWithOnes(out->act, out->size, 0.0f); // Fill with zeros instead of ones
 
-  add->forward(out, in);
+	add->forward(out, in);
 
-  for (int i = 0; i < out->size; i++){
-    EXPECT_EQ(out->act[i], in->act[i]);
-  }
+	for (int i = 0; i < out->size; i++){
+	EXPECT_EQ(out->act[i], in->act[i]);
+	}
 
-  delete add;
+	delete add;
 }
 
 TEST_F(AddTest, NullData) {
@@ -115,18 +117,73 @@ TEST_F(AddTest, NullData) {
 }
 
 TEST_F(AddTest, DifferentSize) {
-  Add* add = new Add();
+	Add* add = new Add();
 
-  delete[] in->act;
-  in->act = new float[100];
-  in->size = 100;
-  in->shape = {1, 100};
-  fillArrayWithRandom(out->act, out->size);
+	delete[] in->act;
+	in->act = new float[100];
+	in->size = 100;
+	in->shape = {1, 100};
+	fillArrayWithRandom(out->act, out->size);
 
-  // This should throw an exception or return an error
-  EXPECT_THROW(add->forward(out, in), std::invalid_argument);
+	// This should throw an exception or return an error
+	EXPECT_THROW(add->forward(out, in), std::invalid_argument);
 
-  delete add;
+	delete add;
+}
+
+TEST_F(AddTest, Backward){
+	Add* add = new Add();
+
+	fillArrayWithRandom(out->act_grads, out->size);
+	std::memset(in->act_grads, 0, in->size * sizeof(float));
+
+	add->backward(out, in);
+
+	for (int i = 0; i < in->size; i++){
+		EXPECT_FLOAT_EQ(in->act_grads[i], out->act_grads[i]);
+	}
+
+	add->backward(out, in);
+
+	for (int i = 0; i < in->size; i++){
+		EXPECT_FLOAT_EQ(in->act_grads[i], 2*out->act_grads[i]);
+	}
+}
+
+TEST_F(AddTest, InPlaceBackward){
+	Add* add = new Add();
+
+	fillArrayWithRandom(out->act_grads, out->size);
+
+	float* buffer = new float[out->size];
+	std::memcpy(buffer, out->act_grads, out->size * sizeof(float));
+
+	add->backward(out, out);
+
+	for (int i = 0; i < in->size; i++){
+		EXPECT_FLOAT_EQ(out->act_grads[i], 2*buffer[i]);
+	}
+
+	delete[] buffer;
+
+}
+
+TEST_F(AddTest, InPlaceForward){
+	Add* add = new Add();
+
+	fillArrayWithRandom(out->act, out->size);
+
+	float* buffer = new float[out->size];
+	std::memcpy(buffer, out->act, out->size * sizeof(float));
+
+	add->forward(out, out);
+
+	for (int i = 0; i < in->size; i++){
+		EXPECT_FLOAT_EQ(out->act[i], 2*buffer[i]);
+	}
+
+	delete[] buffer;
+
 }
 
 

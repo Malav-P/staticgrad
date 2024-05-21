@@ -87,7 +87,8 @@ void GPT2::forward(Node* out, Node* in){
     // forward through the encoder 
     encoder->forward(out_internal, in_internal);
 
-    std::cout << "encoder complete...\n";
+    // for debugging purposes, can remove
+    // std::cout << "encoder complete...\n";
 
     // forward through the transformer blocks
     for (int i = 0; i < L; i++){
@@ -106,7 +107,9 @@ void GPT2::forward(Node* out, Node* in){
 
         // forward through i-th TransformerBlock
         tblock->forward(out_internal, in_internal);
-        std::cout<< "tblock " << i + 1 << " complete\n";
+
+        // for debugging purposes, can remove
+        // std::cout<< "tblock " << i + 1 << " complete\n";
     }
 
     // set up in_internal and out_internal
@@ -123,7 +126,8 @@ void GPT2::forward(Node* out, Node* in){
     // forward through layernorm
     final_layernorm->forward(out_internal, in_internal);
 
-    std::cout << "final layernorm complete...\n";
+    // for debugging, can remove
+    // std::cout << "final layernorm complete...\n";
 
     // set up in_internal and out_internal
     in_internal->act = out_internal->act;
@@ -138,8 +142,9 @@ void GPT2::forward(Node* out, Node* in){
 
     // forward through unembedding (matmul)
     unembedding->forward(out_internal, in_internal);
-    
-    std::cout << "unembedding complete...\n";
+
+    // for debugging, can remove
+    // std::cout << "unembedding complete...\n";
 
 
     // set up in_internal and out_internal
@@ -156,7 +161,8 @@ void GPT2::forward(Node* out, Node* in){
     // forward through softmax
     softmax->forward(out_internal, in_internal);
 
-    std::cout << "softmax complete...\n";
+    // for debugging, can remove
+    // std::cout << "softmax complete...\n";
 
 
     // verify that results are in out Node

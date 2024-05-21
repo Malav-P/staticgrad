@@ -1,7 +1,15 @@
 # Compiler (g++ or clang++ both work)
 CC = g++
+
 # Compiler flags
-CXXFLAGS = -std=c++17 -framework Accelerate -DACCELERATE_NEW_LAPACK
+CXXFLAGS = -std=c++17 -framework Accelerate -DACCELERATE_NEW_LAPACK #-Wall
+
+# address sanitizer
+ADDRESS_SANITIZER = -fsanitize=address -fno-omit-frame-pointer
+
+ifeq ($(SANITIZE), 1)
+  CXXFLAGS += $(ADDRESS_SANITIZER)
+endif
 
 # Library directories
 LIB_DIRS = -L/opt/homebrew/lib
@@ -11,9 +19,6 @@ LIBS = -lgtest -lgtest_main -pthread
 
 # Include dirs
 INCLUDE_DIRS = -I./ -I/opt/homebrew/include/
-
-# CFlags
-CFLAGS = -Wall
 
 # Binary directory
 BIN_DIR = bin
@@ -63,11 +68,11 @@ run: all
 	./$(BIN_DIR)/transformerblock_test
 	./$(BIN_DIR)/gpt2_test
 
-leaks: all
-	leaks --atExit -- ./$(BIN_DIR)/att_test
-	leaks --atExit -- ./$(BIN_DIR)/add_test
-	leaks --atExit -- ./$(BIN_DIR)/layernorm_test
-	leaks --atExit -- ./$(BIN_DIR)/matmul_test
-	leaks --atExit -- ./$(BIN_DIR)/encoder_test
-	leaks --atExit -- ./$(BIN_DIR)/transformerblock_test
-	leaks --atExit -- ./$(BIN_DIR)/gpt2_test
+# leaks: all
+# 	leaks --atExit -- ./$(BIN_DIR)/att_test
+# 	leaks --atExit -- ./$(BIN_DIR)/add_test
+# 	leaks --atExit -- ./$(BIN_DIR)/layernorm_test
+# 	leaks --atExit -- ./$(BIN_DIR)/matmul_test
+# 	leaks --atExit -- ./$(BIN_DIR)/encoder_test
+# 	leaks --atExit -- ./$(BIN_DIR)/transformerblock_test
+# 	leaks --atExit -- ./$(BIN_DIR)/gpt2_test
