@@ -8,6 +8,11 @@ void fillArrayWithRandom(float* arr, int size) {
         arr[i] = static_cast <float> (rand()) / RAND_MAX;
     }
 }
+void fillArrayWithOnes(float* arr, int size) {
+    for (int i = 0; i < size; i++) {
+        arr[i] = 1.0f;
+    }
+}
 
 class MatmulTest : public ::testing::Test {
   protected:
@@ -22,13 +27,17 @@ class MatmulTest : public ::testing::Test {
         in = new Node();
         in->act = new float[B * T * C];
         in->act_grads = new float[B * T * C]; 
-        in->shape = {B, T, C};         in->size = B * T * C;
+        in->shape = {B, T, C};
+        in->size = B * T * C;
 
         out = new Node();
         out->act = new float[B * T * n];
         out->act_grads = new float[B * T * n]; out->shape = {B, T, n};
-        out->size = B * T * n;          
+        out->size = B * T * n;    
+
+        // param and grad for matmul      
         params = new float[p * n];
+        grad = new float[p * n];
 
         // Initialize params array with random values
         fillArrayWithRandom(params, p * n);
@@ -42,6 +51,7 @@ class MatmulTest : public ::testing::Test {
         delete[] out->act_grads;
         delete out;
         delete[] params;
+        delete[] grad;
   } 
 
   size_t B;
@@ -53,9 +63,10 @@ class MatmulTest : public ::testing::Test {
   Node* in; 
   Node* out;  
   float* params;
+  float* grad;
 };
 
-TEST_F(MatmulTest, ForwardPassMatMul) {
+TEST_F(MatmulTest, Forward) {
    Matmul* matmul = new Matmul(params, nullptr);
 
    // Fill input and output arrays with random values
@@ -80,6 +91,56 @@ TEST_F(MatmulTest, ForwardPassMatMul) {
    delete[] expected_out;
    delete matmul;
 }  
+
+TEST_F(MatmulTest, Backward) {
+	Matmul* matmul = new Matmul(params, grad);
+
+	// Fill data
+	std::memset(in->act_grads, 0, in->size * sizeof(float));
+	std::memset(matmul->grad, 0, p*n * sizeof(float));
+	fillArrayWithOnes(out->act_grads, out->size);
+	fillArrayWithRandom(in->act, in->size);
+
+	matmul->backward(out, in);
+
+	// check gradient wrt input
+	for (int b = 0; b < B; b++){
+		for (int t = 0;  t < T; t++){
+			for (int c = 0; c < C; c++){
+
+				float expected = 0.0f;
+				for (int i = 0; i < n; i++){
+					expected += matmul->params[ c*n + i];
+				}
+				EXPECT_FLOAT_EQ(in->act_grads[b*T*C + t*C + c], expected);
+
+			}
+
+		}
+	}
+
+	// check gradient wrt param
+	for (int i = 0; i < p; i++){
+
+		float expected = 0.0f;
+		for (int b = 0; b < B; b++){
+			float* A = in->act + b*T*C + i;
+			
+			for (int t = 0; t < T; t++){
+				expected += A[t*C];
+			}
+			
+		}
+
+		for (int j = 0 ; j < n; j++){
+			EXPECT_FLOAT_EQ(matmul->grad[i*n + j], expected);
+		}
+
+	}
+
+
+	delete matmul;
+}
 
 TEST_F(MatmulTest, InputNull) {
    Matmul* matmul = new Matmul(params, nullptr);

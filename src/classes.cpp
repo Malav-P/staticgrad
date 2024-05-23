@@ -572,6 +572,19 @@ void LayerNorm::backward(Node* out, Node* in){
         }
     }
 }
+
+/**
+ * Computes the forward pass of matrix multiplication.
+ *
+ * This method performs a matrix multiplication operation on the input node's
+ * activation values and the layer's parameters, storing the result in the output
+ * node's activation values.
+ *
+ * @param out The output node where the result of the matrix multiplication will be stored.
+ * @param in The input node containing the activation values to be multiplied.
+ *
+ * @throws std::invalid_argument If either the input or output node's activation values are nullptr.
+ */
         
 void Matmul::forward(Node* out, Node* in) {
 
@@ -619,11 +632,12 @@ void Matmul::backward(Node* out, Node* in) {
 
         float* A = in->act + b * m * k;
         float* dLdA = in->act_grads + b * m * k;
-        float* dLdC = out->act_grads + b * (m) * (n);
+        float* dLdC = out->act_grads + b * m * n;
 
-
+        // gradient wrt input
         cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
                     m, k, n, alpha, dLdC, n, B_, n, beta, dLdA, k);
+        // gradient wrt parameters
         cblas_sgemm(CblasRowMajor, CblasTrans, CblasNoTrans,
                     p, n, m, alpha, A, k, dLdC, n, beta, dLdB, n);
 

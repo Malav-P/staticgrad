@@ -178,7 +178,7 @@ TEST_F(LayerNormTest, Backward){
 		EXPECT_FLOAT_EQ(layer_norm->grad[C + i], expected);
 	}
 
-	// TODO Check scale (weight) gradients
+	// Check scale (weight) gradients
 	for (int i = 0; i < C; i++){
 		float expected = 0.0f;
 		for (int b = 0; b < B; b++){
