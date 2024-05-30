@@ -107,6 +107,11 @@ TEST_F(GPT2Test, Forward) {
     // fill parameters with random values between -1.0 and 1.0
     fillArrayWithRandom(model->params, model->num_params);
 
+    // check outputs are zero
+    for (int i = 0; i < out->size; i++){
+        EXPECT_FLOAT_EQ(out->act[i], 0.0f);
+    }
+
     // forward pass should work
     EXPECT_NO_THROW(model->forward(out, in));
 
@@ -125,6 +130,84 @@ TEST_F(GPT2Test, Forward) {
         }
     }
 
+}
+
+TEST_F(GPT2Test, Backward) {
+    C = 768; // embedding dimension
+    L = 12; // number of transformer blocks
+    V = 50257; // vocab size
+    maxT = 1024; // max sequence length
+    NH = 12; // number of attention heads
+
+    B = 4; // batch size
+    T = 64; // sequence length
+
+    GPT2* model = new GPT2(C, L, V, maxT, NH);
+
+    size_t num_act = gpt2_num_acts(B, T, C, L, V);
+
+    float* acts = new float[num_act];
+    float* grad = new float[num_act];
+
+    Node* in = new Node();
+    in->act = acts;
+    in->act_grads = grad;
+    in->shape = {B, T};
+    in->size = B*T;
+
+    Node* out = new Node();
+    out->act = acts + num_act - B*T*V;
+    out->act_grads = grad + num_act - B*T*V;
+    out->shape = {B, T, V};
+    out->size = B*T*V;
+
+    // Define the range
+    size_t lower_bound = 0;
+    size_t upper_bound = V-1;
+
+    // Seed with a real random value, if available
+    std::random_device rd;
+
+    // Initialize random number generator with seed
+    std::mt19937 gen(rd());
+
+    // Define the distribution range
+    std::uniform_int_distribution<> distrib(lower_bound, upper_bound);
+
+    // fill input with random tokens
+    for (int i =0; i < B*T; i++){
+        in->act[i] = distrib(gen);
+    }
+
+    std::cout << "Completed act fill\n";
+
+
+    // fill parameters with random values between -1.0 and 1.0
+    fillArrayWithRandom(model->params, model->num_params);
+
+    // check outputs are zero
+    for (int i = 0; i < out->size; i++){
+        EXPECT_FLOAT_EQ(out->act[i], 0.0f);
+    }
+
+    std::cout << "Beginnning forward pass\n";
+
+    // forward pass should work
+    model->forward(out, in);
+
+    std::cout << "Completed forward pass\n";
+
+    // fill output grad
+    for (int j = 0; j < out->size; j++){
+        out->act_grads[j] = 1.0f;
+    }
+
+    std::cout << "Completed output grad fill\n";
+
+    // backward pass should work
+    EXPECT_NO_THROW(model->backward(out, in));
+
+    std::cout << "Completed backward pass\n";
 
 
 }

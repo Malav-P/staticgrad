@@ -30,9 +30,6 @@ void shift_back(Node* out, Node* in, std::vector<size_t> shape_){
     out->shape = in->shape;
     out->size = in->size;
 
-    in->act += in->size;
-    in->act_grads += in->size;
-
     in->shape = shape_;
 
     size_t numel = 1;
@@ -42,6 +39,8 @@ void shift_back(Node* out, Node* in, std::vector<size_t> shape_){
     }
 
     in->size = numel;
+    in->act -= in->size;
+    in->act_grads -= in->size;
 
 }
 
@@ -243,16 +242,18 @@ void TransformerBlock::backward(Node* out, Node* in){
 
     // backward through first matmul and bias
     shift_back(out_internal, in_internal, {B, T, C}); // (B, T, C) is input shape of matmul operatnion
-    ra1->backward(out_internal, in_internal);
+    ra1->backward(out_internal, out_internal);
     mat1->backward(out_internal, in_internal);
 
     // backward through first layernorm
-    shift_back(out_internal, in_internal, {B, T, C}); // (B, T, C is input shape of layernorm
+    shift_back(out_internal, in_internal, {B, T, C}); // (B, T, C) is input shape of layernorm
     ln1->backward(out_internal, in_internal);
 
     // verify that results are in 'in' Node
     if ((in_internal->act != in->act) || (in_internal->act_grads != in->act_grads) || (in_internal->size != in->size)){
-        throw std::runtime_error("in node and in_internal node are not equal");
+        std::string errorMessage = "in node and in_internal node are not equal. Difference of pointer locations: " + std::to_string(in_internal->act - in->act);
+        throw std::runtime_error(errorMessage);
+        
     }
 
     // free allocated memory for helper nodes
@@ -273,14 +274,19 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
 
     size_t head_size = C / num_heads;
 
-    float* buffer1 = buffer;
-    float* buffer2 = buffer + 1024; // +1024 because maxseqlen=1024
+    int half_buffer_size = num_heads*B*lrint(T*(T+1)/2);
+
+    delete[] buffer;
+    buffer = new float[2*half_buffer_size];
     
     for (size_t b = 0 ; b < B; b++){
 
         for (size_t t = 0; t < T; t++){
 
             for (size_t nh = 0 ; nh < num_heads; nh++){
+
+                // get buffer1
+                float* buffer1 = buffer + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
 
                 // get query vector
                 float* q = in->act + b * T * 3*C + t * 3*C + nh * head_size;
@@ -306,6 +312,8 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
                     buffer1[t2] = score;       
 
                 }
+
+                float* buffer2 = buffer + half_buffer_size + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
 
                 // normalize scores according to softmax
                 float exp_sum = 0;
@@ -353,11 +361,14 @@ void Attention::backward(Node* out, Node* in) {
 
     size_t head_size = C / num_heads;
 
-    float* dbuffer1 = dbuffer;
-    float* dbuffer2 = dbuffer + 1024; // +1024 because maxseqlen=1024
+    if (buffer == nullptr){
+        std::__throw_runtime_error("buffer was not allocated and filled properly. This may be because backward() was called before forward()");
+    }
 
-    float* buffer1 = buffer;
-    float* buffer2 = buffer + 1024;
+    int half_buffer_size = num_heads*B*lrint(T*(T+1)/2);
+
+    delete[] dbuffer;
+    dbuffer = new float[2*half_buffer_size];
 
 
     for (size_t b = 0 ; b < B; b++){
@@ -368,6 +379,11 @@ void Attention::backward(Node* out, Node* in) {
 
                 // get output grad
                 float* out_g = out->act_grads + b * T * C + t * C + nh * head_size;
+
+                // get dbuffer2 and buffer2
+                float* dbuffer2 = dbuffer + half_buffer_size + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
+                float* buffer2 = buffer + half_buffer_size + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
+
 
                 // backward through accumulation 
                 for (size_t t2 = 0; t2 <= t; t2++){
@@ -380,6 +396,9 @@ void Attention::backward(Node* out, Node* in) {
                         dv_t2[t2] += out_g[i] * buffer2[t2];
                     }
                 }
+
+                // get dbuffer1
+                float* dbuffer1 = dbuffer + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
 
                 // backward through softmax buffer2 = softmax(buffer1)
                 for (size_t t2 = 0; t2 <= t; t2++){

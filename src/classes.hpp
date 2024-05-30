@@ -199,10 +199,8 @@ class Attention : public Operation {
         Attention(size_t num_heads_, size_t maxT):
             Operation(nullptr, nullptr),
             num_heads(num_heads_),
-            buffer(nullptr) {
-                buffer = new float[2*maxT]; // max seq len
-                dbuffer = new float[2*maxT];
-            }
+            buffer(nullptr),
+            dbuffer(nullptr) {}
 
         ~Attention(){
             delete[] buffer;
