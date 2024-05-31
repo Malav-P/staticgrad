@@ -1,7 +1,7 @@
 #include <iostream>
 #include <memory>
 #include <gtest/gtest.h>
-#include "src/classes.hpp"
+#include "include/classes.hpp"
 
 using namespace std;
 

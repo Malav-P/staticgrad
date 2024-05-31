@@ -8,8 +8,6 @@
 #include <iostream>
 #include <Accelerate/Accelerate.h>
 
-
-
 class Node {
     public:
 
@@ -27,6 +25,9 @@ class Node {
 
         ~Node(){}
 };
+
+void shift(Node* out, Node* in, std::vector<size_t> shape_);
+void shift_back(Node* out, Node* in, std::vector<size_t> shape_);
 
 class Operation {
     public :
@@ -96,13 +97,8 @@ class Matmul : public Operation {
         
         Matmul(float* params_, float* grad_, float multiplier_ = 1.0):
             multiplier(multiplier_),
-            Operation(params_, grad_) {
-                // ASSUME in is shape (B,T,C)
-                // TODO : checks to ensure matrix dimenions agree.
-
-            }
+            Operation(params_, grad_) {}
         
-
         void forward(Node* out, Node* in) override;
         void backward(Node* out, Node* in) override;
 
@@ -154,12 +150,12 @@ class Softmax : public Operation {
 
 class RowAdd : public Operation {
     public :
+
         RowAdd(float* params_, float* grad_):
             Operation(params_, grad_) { }
 
         void forward(Node* out, Node* in) override;
         void backward(Node* out, Node* in) override;
-
 };
 
 
@@ -174,12 +170,9 @@ class TransformerBlock : public Operation {
         LayerNorm* ln1;
         Matmul* mat1;
         RowAdd* ra1;
-
         Attention* att;
-
         Matmul* mat2;
         RowAdd* ra2;
-
         Add* res1;
         LayerNorm* ln2;
         Matmul* mat3;

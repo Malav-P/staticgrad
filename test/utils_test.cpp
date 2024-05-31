@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "src/utils.hpp"
+#include "include/utils.hpp"
 
 void fillArrayWithRandom(float* arr, int size) {
   for (int i = 0; i < size; i++) {

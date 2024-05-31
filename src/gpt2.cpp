@@ -1,4 +1,4 @@
-#include "./gpt2.hpp"
+#include "../include/gpt2.hpp"
 
 
 size_t gpt2_num_acts(size_t B, size_t T, size_t C, size_t L, size_t V){
@@ -71,7 +71,8 @@ void GPT2::forward(Node* out, Node* in){
 
     size_t B = in->shape[0];
     size_t T = in->shape[1];
-
+    
+    // forward through the encoder 
     Node* in_internal = new Node();
     in_internal->act = in->act;
     in_internal->act_grads = in->act_grads;
@@ -80,19 +81,11 @@ void GPT2::forward(Node* out, Node* in){
 
     Node* out_internal = new Node();
     out_internal->act = in_internal->act + B * T;
-    out_internal->act_grads = in_internal->act_grads + B * T; // should remove B*T since input does not require grads. Here for readability
+    out_internal->act_grads = in_internal->act_grads + B * T; 
     out_internal->shape = {B, T, C}; // output shape of encoder
     out_internal->size = B * T * C;
 
-    // for debugging purposes, can remove
-    // std::cout << "encoder starting...\n";
-
-    
-    // forward through the encoder 
     encoder->forward(out_internal, in_internal);
-
-    // for debugging purposes, can remove
-    // std::cout << "encoder complete...\n";
 
     // forward through the transformer blocks
     for (int i = 0; i < L; i++){
@@ -111,63 +104,19 @@ void GPT2::forward(Node* out, Node* in){
 
         // forward through i-th TransformerBlock
         tblock->forward(out_internal, in_internal);
-
-        // for debugging purposes, can remove
-        // std::cout<< "tblock " << i + 1 << " complete\n";
     }
 
-    // set up in_internal and out_internal
-    in_internal->act = out_internal->act;
-    in_internal->act_grads = out_internal->act_grads;
-    in_internal->shape = out_internal->shape;
-    in_internal->size = out_internal->size;
-
-    out_internal->act += out_internal->size;
-    out_internal->act_grads += out_internal->size;
-    out_internal->shape = {B, T, C};
-    out_internal->size = B*T*C;
-
     // forward through layernorm
+    shift(out_internal, in_internal, {B, T, C});
     final_layernorm->forward(out_internal, in_internal);
 
-    // for debugging, can remove
-    // std::cout << "final layernorm complete...\n";
-
-    // set up in_internal and out_internal
-    in_internal->act = out_internal->act;
-    in_internal->act_grads = out_internal->act_grads;
-    in_internal->shape = out_internal->shape;
-    in_internal->size = out_internal->size;
-
-    out_internal->act += out_internal->size;
-    out_internal->act_grads += out_internal->size;
-    out_internal->shape = {B, T, V};
-    out_internal->size = B*T*V;
-
     // forward through unembedding (matmul)
+    shift(out_internal, in_internal, {B, T, V});
     unembedding->forward(out_internal, in_internal); // (B, T, C) - > (B, T, V)
 
-    // for debugging, can remove
-    // std::cout << "unembedding complete...\n";
-
-
-    // set up in_internal and out_internal
-    in_internal->act = out_internal->act;
-    in_internal->act_grads = out_internal->act_grads;
-    in_internal->shape = out_internal->shape;
-    in_internal->size = out_internal->size;
-
-    out_internal->act += out_internal->size;
-    out_internal->act_grads += out_internal->size;
-    out_internal->shape = {B, T, V};
-    out_internal->size = B*T*V;
-
     // forward through softmax
+    shift(out_internal, in_internal, {B, T, V});
     softmax->forward(out_internal, in_internal); // (B, T, V) -> (B, T, V)
-
-    // for debugging, can remove
-    // std::cout << "softmax complete...\n";
-
 
     // verify that results are in out Node
     if ((out_internal->act != out->act) || (out_internal->act_grads != out->act_grads) || (out_internal->size != out->size)){
@@ -188,56 +137,27 @@ void GPT2::backward(Node* out, Node* in){
 
     Node* out_internal = new Node();
     out_internal->act = out->act;
-    out_internal->act_grads = out->act_grads; // should remove B*T since input does not require grads. Here for readability
-    out_internal->shape = out->shape; // output shape of encoder
+    out_internal->act_grads = out->act_grads;
+    out_internal->shape = out->shape; 
     out_internal->size = out->size;
 
     Node* in_internal = new Node();
-    in_internal->act = out_internal->act - B*T*V;
-    in_internal->act_grads = out_internal->act_grads - B*T*V;
     in_internal->shape = {B, T, V};
     in_internal->size = B*T*V;
-
-    // for debugging, can remove
-    std::cout << "beginning softmax...\n";
+    in_internal->act = out->act - in_internal->size;
+    in_internal->act_grads = out->act_grads - in_internal->size;
 
     // backward through softmax takes forever, need to couple with cross entropy loss.
-    // TODO make sure the data here is written already by another function outside of this method. name
-    // the other function crossentropy_softmax_backward()
     // softmax->backward(out_internal, in_internal);
+    std::cout << "WARN: Backward through softmax is not done here...ensure that cross_entropy_backward is called prior to this method to fill the gradients for this part of the backward pass.\n";
 
-    // for debugging, can remove
-    std::cout << "softmax complete...\n";
 
-    // set up out_internal and in_internal
-    out_internal->act = in_internal->act;
-    out_internal->act_grads = in_internal->act_grads;
-    out_internal->shape = in_internal->shape;
-    out_internal->size = in_internal->size;
-
-    in_internal->size = B*T*C;
-    in_internal->shape = {B, T, C};
-    in_internal->act -= in_internal->size;
-    in_internal->act_grads -= in_internal->size;
-
-    //backward through unembedding
+    // backward through unembedding
+    shift_back(out_internal, in_internal, {B, T, C});
     unembedding->backward(out_internal, in_internal);
 
-    // for debugging, can remove
-    std::cout << "unembedding complete...\n";
-
-    // set up out_internal and in_internal
-    out_internal->act = in_internal->act;
-    out_internal->act_grads = in_internal->act_grads;
-    out_internal->shape = in_internal->shape;
-    out_internal->size = in_internal->size;
-
-    in_internal->size = B*T*C;
-    in_internal->shape = {B, T, C};
-    in_internal->act -= in_internal->size;
-    in_internal->act_grads -= in_internal->size;
-
     // backward through layernorm
+    shift_back(out_internal, in_internal, {B, T, C});
     final_layernorm->backward(out_internal, in_internal);
 
     // backward through the transformer blocks
@@ -257,23 +177,10 @@ void GPT2::backward(Node* out, Node* in){
 
         // backward through i-th TransformerBlock
         tblock->backward(out_internal, in_internal);
-
-        // for debugging purposes, can remove
-        std::cout<< "tblock " << i + 1 << " complete\n";
     }
 
-    // set up out_internal and in_internal
-    out_internal->act = in_internal->act;
-    out_internal->act_grads = in_internal->act_grads;
-    out_internal->shape = in_internal->shape;
-    out_internal->size = in_internal->size;
-
-    in_internal->size = B*T;
-    in_internal->shape = {B, T};
-    in_internal->act -= in_internal->size;
-    in_internal->act_grads -= in_internal->size;
-
     // backwards through encoder
+    shift_back(out_internal, in_internal, {B, T});
     encoder->backward(out_internal, in_internal);
 
     // verify that results are in out Node
@@ -283,5 +190,4 @@ void GPT2::backward(Node* out, Node* in){
 
     delete in_internal;
     delete out_internal;
-
 }

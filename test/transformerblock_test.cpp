@@ -1,25 +1,20 @@
 #include <iostream>
 #include <memory>
 #include <gtest/gtest.h>
-#include "src/classes.hpp"
+#include "include/classes.hpp"
 
 using namespace std;
 
 void fillArrayWithRandom(float* arr, int size) {
-  for (int i = 0; i < size; i++) {
-    arr[i] = ((float)rand() / RAND_MAX)*2.0f - 1.0f; // Generates a random float between -1 and 1
-  }
-}
-void fillArrayWithZero(float* arr, int size) {
-  for (int i = 0; i < size; i++) {
-    arr[i] = 0.0f;
-  }
+	for (int i = 0; i < size; i++) {
+	arr[i] = ((float)rand() / RAND_MAX)*2.0f - 1.0f; // Generates a random float between -1 and 1
+	}
 }
 
 void fillArrayWithOnes(float* arr, int size) {
-  for (int i = 0; i < size; i++) {
-    arr[i] = 1.0; // Assigning each element the value 1
-  }
+	for (int i = 0; i < size; i++) {
+	arr[i] = 1.0; // Assigning each element the value 1
+	}
 }
 
 class TransformerBlockTest : public ::testing::Test {
@@ -86,7 +81,8 @@ TEST_F(TransformerBlockTest, InvalidNumHeads) {
 TEST_F(TransformerBlockTest, WarnSmallVariance) {
 	size_t num_heads = 12;
 	TransformerBlock* tblock = new TransformerBlock(params, params_grad, C, num_heads, maxT);
-	fillArrayWithZero(in->act, in->size);
+
+	std::memset(in->act, 0, in->size * sizeof(float));
 
 	testing::internal::CaptureStderr();
 
@@ -147,67 +143,12 @@ TEST_F(TransformerBlockTest, Backward) {
 	fillArrayWithRandom(in->act, in->size);
 	tblock->forward(out, in);
 
-	// float eps = 1e-3;
-	// float* cache1 = new float[out->size];
-	// float* cache2 = new float[out->size];
-	// for (int i = 0 ; i < 1; i++){
-	// 	// perturb input
-	// 	in->act[i] += eps;
-
-	// 	// forward pass with +eps perturbation
-	// 	tblock->forward(out, in);
-
-	// 	// cache result
-	// 	std::memcpy(cache1, out->act, (out->size) * sizeof(float));
-
-	// 	// perturb input in other direction
-	// 	in->act[i] -= 2*eps;
-
-	// 	// forward pass with -eps perturbation
-	// 	tblock->forward(out, in);
-
-	// 	// cache result
-	// 	std::memcpy(cache2, out->act, (out->size) * sizeof(float));
-
-	// 	// forward pass unperturbed input
-	// 	in->act[i] += eps;
-	// 	tblock->forward(out, in);
-
-	// 	// assume loss is mean of output array
-	// 	float l1;
-	// 	float l2;
-	// 	for (int j = 0 ; j < out->size; j++){
-	// 		l1 += cache1[j];
-	// 		l2 += cache2[j];
-	// 	}
-
-	// 	l1 *= 1 / out->size;
-	// 	l2 *= 1 / out->size;
-
-	// 	float numerical_grad = (l1 - l2) / (2 * eps);
-
-	// 	// fill output grad with correct values
-	// 	for (int j = 0; j < out->size ; j++){
-	// 		out->act_grads[j] = 1.0f / (out->size);
-	// 	}
-
-	// 	// backward pass
-	// 	tblock->backward(out, in);
-
-	// 	// check grad
-	// 	EXPECT_NEAR(in->act_grads[i], numerical_grad, eps);
-	// }
-
-	// delete[] cache1;
-	// delete[] cache2;
-	// fill output grad with correct values
 	for (int j = 0; j < out->size ; j++){
 		out->act_grads[j] = 1.0f / (out->size);
 	}
 
 	EXPECT_NO_THROW(tblock->backward(out, in));
 
-	
 
 	delete tblock;
 }

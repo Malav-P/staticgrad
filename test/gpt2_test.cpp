@@ -1,7 +1,7 @@
 #include <iostream>
 #include <memory>
 #include <gtest/gtest.h>
-#include "src/gpt2.hpp"
+#include "include/gpt2.hpp"
 #include <chrono>
 #include <random>
 

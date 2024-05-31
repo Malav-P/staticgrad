@@ -1,4 +1,4 @@
-#include "./classes.hpp"
+#include "../include/classes.hpp"
 #include <cmath>
 
 void shift(Node* out, Node* in, std::vector<size_t> shape_){

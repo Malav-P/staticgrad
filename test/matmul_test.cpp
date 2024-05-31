@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <cmath>
-#include "src/classes.hpp"
+#include "include/classes.hpp"
 
 // Helper function to fill an array with random values
 void fillArrayWithRandom(float* arr, int size) {

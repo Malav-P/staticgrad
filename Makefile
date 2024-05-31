@@ -26,9 +26,9 @@ BIN_DIR = bin
 # Source files
 SOURCES = src/classes.cpp
 
-.PHONY: all clean run leaks
+.PHONY: all clean run
 
-all: att add layernorm matmul softmax encoder transformerblock gpt2
+all: att add layernorm matmul softmax encoder transformerblock gpt2 utils
 
 att: test/att_test.cpp $(SOURCES)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/att_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
@@ -54,6 +54,10 @@ transformerblock: test/transformerblock_test.cpp $(SOURCES)
 gpt2: test/gpt2_test.cpp src/gpt2.cpp $(SOURCES)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/gpt2_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
 
+utils: test/utils_test.cpp src/utils.cpp $(SOURCES)
+	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/utils_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
+
+
 clean:
 	rm -f $(BIN_DIR)/*
 	clear
@@ -67,12 +71,4 @@ run: all
 	./$(BIN_DIR)/encoder_test
 	./$(BIN_DIR)/transformerblock_test
 	./$(BIN_DIR)/gpt2_test
-
-# leaks: all
-# 	leaks --atExit -- ./$(BIN_DIR)/att_test
-# 	leaks --atExit -- ./$(BIN_DIR)/add_test
-# 	leaks --atExit -- ./$(BIN_DIR)/layernorm_test
-# 	leaks --atExit -- ./$(BIN_DIR)/matmul_test
-# 	leaks --atExit -- ./$(BIN_DIR)/encoder_test
-# 	leaks --atExit -- ./$(BIN_DIR)/transformerblock_test
-# 	leaks --atExit -- ./$(BIN_DIR)/gpt2_test
+	./$(BIN_DIR)/utils_test
