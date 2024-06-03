@@ -28,7 +28,7 @@ SOURCES = src/classes.cpp
 
 .PHONY: all clean run
 
-all: att add layernorm matmul softmax encoder transformerblock gpt2 utils
+all: att add layernorm matmul softmax encoder transformerblock gpt2 utils datastream
 
 att: test/att_test.cpp $(SOURCES)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/att_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
@@ -56,6 +56,9 @@ gpt2: test/gpt2_test.cpp src/gpt2.cpp $(SOURCES)
 
 utils: test/utils_test.cpp src/utils.cpp $(SOURCES)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/utils_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
+
+datastream: test/datastream_test.cpp src/datastream.cpp
+	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/datastream_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
 
 
 clean:
