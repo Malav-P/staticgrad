@@ -1,27 +1,9 @@
-#include <iostream>
-#include <memory>
 #include <gtest/gtest.h>
-#include "include/gpt2.hpp"
-#include <chrono>
+#include "gpt2.hpp"
+#include "test_common.hpp"
 #include <random>
 
 using namespace std;
-
-void fillArrayWithRandom(float* arr, int size) {
-    // Seed with a real random value, if available
-    std::random_device rd;
-
-    // Initialize the random number generator with the seed
-    std::mt19937 gen(rd());
-
-    // Define the uniform real distribution in the range [-1, 1]
-    std::uniform_real_distribution<float> distrib(-1.0f, 1.0f);
-
-    // Fill the array with random float numbers in the range [-1, 1]
-    for (size_t i = 0; i < size; ++i) {
-        arr[i] = distrib(gen);
-    }
-}
 
 
 class GPT2Test : public ::testing::Test {
@@ -86,21 +68,11 @@ TEST_F(GPT2Test, Forward) {
     out->shape = {B, T, V};
     out->size = B*T*V;
 
-    // Define the range
-    size_t lower_bound = 0;
-    size_t upper_bound = V-1;
-
-    // Seed with a real random value, if available
     std::random_device rd;
-
-    // Initialize random number generator with seed
     std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(0, V-1);
 
-    // Define the distribution range
-    std::uniform_int_distribution<> distrib(lower_bound, upper_bound);
-
-    // fill input with random tokens
-    for (int i =0; i < B*T; i++){
+    for (int i = 0; i < B*T; i++) {
         in->act[i] = distrib(gen);
     }
 
@@ -112,8 +84,17 @@ TEST_F(GPT2Test, Forward) {
         EXPECT_FLOAT_EQ(out->act[i], 0.0f);
     }
 
+    auto start = std::chrono::high_resolution_clock::now();
+
     // forward pass should work
     EXPECT_NO_THROW(model->forward(out, in));
+
+    // Record end time
+    auto end = std::chrono::high_resolution_clock::now();
+    // Calculate the duration
+    std::chrono::duration<double, std::milli> duration = end - start;
+    // Output the duration in milliseconds
+    std::cout << "Time taken by forward(): " << duration.count() << " ms" << std::endl;
 
     // each array at (b, t) position should sum to one
     for (int b = 0; b < B; b++){
@@ -161,26 +142,14 @@ TEST_F(GPT2Test, Backward) {
     out->shape = {B, T, V};
     out->size = B*T*V;
 
-    // Define the range
-    size_t lower_bound = 0;
-    size_t upper_bound = V-1;
 
-    // Seed with a real random value, if available
     std::random_device rd;
-
-    // Initialize random number generator with seed
     std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(0, V-1);
 
-    // Define the distribution range
-    std::uniform_int_distribution<> distrib(lower_bound, upper_bound);
-
-    // fill input with random tokens
-    for (int i =0; i < B*T; i++){
+    for (int i = 0; i < B*T; i++) {
         in->act[i] = distrib(gen);
     }
-
-    std::cout << "Completed act fill\n";
-
 
     // fill parameters with random values between -1.0 and 1.0
     fillArrayWithRandom(model->params, model->num_params);
@@ -190,24 +159,26 @@ TEST_F(GPT2Test, Backward) {
         EXPECT_FLOAT_EQ(out->act[i], 0.0f);
     }
 
-    std::cout << "Beginnning forward pass\n";
-
     // forward pass should work
     model->forward(out, in);
 
-    std::cout << "Completed forward pass\n";
 
     // fill output grad
     for (int j = 0; j < out->size; j++){
         out->act_grads[j] = 1.0f;
     }
 
-    std::cout << "Completed output grad fill\n";
+    auto start = std::chrono::high_resolution_clock::now();
 
     // backward pass should work
     EXPECT_NO_THROW(model->backward(out, in));
 
-    std::cout << "Completed backward pass\n";
+    // Record end time
+    auto end = std::chrono::high_resolution_clock::now();
+    // Calculate the duration
+    std::chrono::duration<double, std::milli> duration = end - start;
+    // Output the duration in milliseconds
+    std::cout << "Time taken by backward(): " << duration.count() << " ms" << std::endl;
 
 
 }

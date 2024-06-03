@@ -149,7 +149,7 @@ void GPT2::backward(Node* out, Node* in){
 
     // backward through softmax takes forever, need to couple with cross entropy loss.
     // softmax->backward(out_internal, in_internal);
-    std::cout << "WARN: Backward through softmax is not done here...ensure that cross_entropy_backward is called prior to this method to fill the gradients for this part of the backward pass.\n";
+    std::cerr << "WARN: Backward through softmax is not done here...ensure that cross_entropy_backward is called prior to this method to fill the gradients for this part of the backward pass.\n";
 
 
     // backward through unembedding

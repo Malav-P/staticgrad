@@ -1,18 +1,7 @@
 #include <gtest/gtest.h>
-#include <cmath>
-#include "include/classes.hpp"
+#include "classes.hpp"
+#include "test_common.hpp"
 
-// Helper function to fill an array with random values
-void fillArrayWithRandom(float* arr, int size) {
-    for (int i = 0; i < size; i++) {
-        arr[i] = static_cast <float> (rand()) / RAND_MAX;
-    }
-}
-void fillArrayWithOnes(float* arr, int size) {
-    for (int i = 0; i < size; i++) {
-        arr[i] = 1.0f;
-    }
-}
 
 class MatmulTest : public ::testing::Test {
   protected:

@@ -1,5 +1,14 @@
 #include "../include/datastream.hpp"
 
+void DataStream::init_buffer(int num_tokens){
+
+    if (buffer != nullptr){
+        delete[] buffer;
+    }
+    
+    buffer = new u_int16_t[num_tokens];
+    buffersize = num_tokens*sizeof(u_int16_t);
+}
 
 void DataStream::open(const std::string& filePath){
 
@@ -24,9 +33,9 @@ void DataStream::close(){
     }
 }
 
-void DataStream::load_buffer(u_int16_t* buffer, int num_bytes){
+void DataStream::load_buffer(){
     if (stream->is_open()){
-        stream->read(reinterpret_cast<char*>(buffer), num_bytes);
+        stream->read(reinterpret_cast<char*>(buffer), buffersize);
 
         if (stream->eof()){
             std::cerr << "WARN: EOF reached. The buffer is not completely loaded.\n";

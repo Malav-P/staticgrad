@@ -9,18 +9,25 @@ class DataStream {
     public:
 
         std::fstream* stream;
+        u_int16_t* buffer;
+        int buffersize; // in bytes
 
         explicit DataStream():
-            stream(new std::fstream)
+            stream(new std::fstream),
+            buffer(nullptr),
+            buffersize(0)
             {}
+
+        void init_buffer(int num_tokens);
 
         void open(const std::string& filePath);
         void close();
 
-        void load_buffer(uint16_t* buffer, int num_bytes);
+        void load_buffer();
 
         ~DataStream(){
             delete stream;
+            delete[] buffer;
         }
 
 

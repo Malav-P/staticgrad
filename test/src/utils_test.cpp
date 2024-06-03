@@ -1,17 +1,6 @@
 #include <gtest/gtest.h>
-#include "include/utils.hpp"
-
-void fillArrayWithRandom(float* arr, int size) {
-  for (int i = 0; i < size; i++) {
-    arr[i] = ((float)rand() / RAND_MAX) * 2.0f - 1.0f; // Generates a random float between -1 and 1
-  }
-}
-
-void fillArrayWithOnes(float* arr, int size, float multiplier = 1.0f) {
-  for (int i = 0; i < size; i++) {
-    arr[i] = 1.0 * multiplier; // Assigning each element the value 1
-  }
-}
+#include "utils.hpp"
+#include "test_common.hpp"
 
 class UtilsTest : public ::testing::Test {
  protected:

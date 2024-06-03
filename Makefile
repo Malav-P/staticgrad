@@ -18,46 +18,46 @@ LIB_DIRS = -L/opt/homebrew/lib
 LIBS = -lgtest -lgtest_main -pthread
 
 # Include dirs
-INCLUDE_DIRS = -I./ -I/opt/homebrew/include/
+INCLUDE_DIRS = -I./StaticGrad/include/ -I./test/include/ -I/opt/homebrew/include/
 
 # Binary directory
-BIN_DIR = bin
+BIN_DIR = test/bin
 
 # Source files
-SOURCES = src/classes.cpp
+SOURCES = StaticGrad/src/classes.cpp test/src/test_common.cpp
 
 .PHONY: all clean run
 
 all: att add layernorm matmul softmax encoder transformerblock gpt2 utils datastream
 
-att: test/att_test.cpp $(SOURCES)
+att: test/src/att_test.cpp $(SOURCES)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/att_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
 
-add: test/add_test.cpp $(SOURCES)
+add: test/src/add_test.cpp $(SOURCES)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/add_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
 
-layernorm: test/layernorm_test.cpp $(SOURCES)
+layernorm: test/src/layernorm_test.cpp $(SOURCES)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/layernorm_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
 
-matmul: test/matmul_test.cpp $(SOURCES)
+matmul: test/src/matmul_test.cpp $(SOURCES)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/matmul_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
 
-softmax: test/softmax_test.cpp $(SOURCES)
+softmax: test/src/softmax_test.cpp $(SOURCES)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/softmax_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
 
-encoder: test/encoder_test.cpp $(SOURCES)
+encoder: test/src/encoder_test.cpp $(SOURCES)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/encoder_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
 
-transformerblock: test/transformerblock_test.cpp $(SOURCES)
+transformerblock: test/src/transformerblock_test.cpp $(SOURCES)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/transformerblock_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
 
-gpt2: test/gpt2_test.cpp src/gpt2.cpp $(SOURCES)
+gpt2: test/src/gpt2_test.cpp StaticGrad/src/gpt2.cpp $(SOURCES)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/gpt2_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
 
-utils: test/utils_test.cpp src/utils.cpp $(SOURCES)
+utils: test/src/utils_test.cpp StaticGrad/src/utils.cpp $(SOURCES)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/utils_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
 
-datastream: test/datastream_test.cpp src/datastream.cpp
+datastream: test/src/datastream_test.cpp StaticGrad/src/datastream.cpp
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/datastream_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
 
 
@@ -66,12 +66,6 @@ clean:
 	clear
 
 run: all
-	./$(BIN_DIR)/att_test
-	./$(BIN_DIR)/add_test
-	./$(BIN_DIR)/layernorm_test
-	./$(BIN_DIR)/matmul_test
-	./$(BIN_DIR)/softmax_test
-	./$(BIN_DIR)/encoder_test
-	./$(BIN_DIR)/transformerblock_test
-	./$(BIN_DIR)/gpt2_test
-	./$(BIN_DIR)/utils_test
+	@for test in $(BIN_DIR)/*_test; do \
+		./$$test; \
+	done

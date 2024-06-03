@@ -1,16 +1,7 @@
 #include <gtest/gtest.h>
-#include "include/classes.hpp"
+#include "classes.hpp"
+#include "test_common.hpp"
 
-void fillArrayWithRandom(float* arr, int size) {
-  for (int i = 0; i < size; i++) {
-    arr[i] = (float)rand() / RAND_MAX; // Generates a random float between 0 and 1
-  }
-}
-void fillArrayWithOnes(float* arr, int size) {
-  for (int i = 0; i < size; i++) {
-    arr[i] = 1.0f;
-  }
-}
 
 class LayerNormTest : public ::testing::Test {
  protected:

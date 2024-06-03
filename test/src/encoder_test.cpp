@@ -1,11 +1,6 @@
 #include <gtest/gtest.h>
-#include "include/classes.hpp"
-
-void fillArrayWithRandom(float* arr, int size) {
-  for (int i = 0; i < size; i++) {
-    arr[i] = (float)rand() / RAND_MAX; // Generates a random float between 0 and 1
-  }
-}
+#include "classes.hpp"
+#include "test_common.hpp"
 
 class EncoderTest : public ::testing::Test {
 	protected:

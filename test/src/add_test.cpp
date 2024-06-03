@@ -1,17 +1,7 @@
 #include <gtest/gtest.h>
-#include "include/classes.hpp"
+#include "classes.hpp"
+#include "test_common.hpp"
 
-void fillArrayWithRandom(float* arr, int size) {
-  for (int i = 0; i < size; i++) {
-    arr[i] = (float)rand() / RAND_MAX; // Generates a random float between 0 and 1
-  }
-}
-
-void fillArrayWithOnes(float* arr, int size, float multiplier = 1.0f) {
-  for (int i = 0; i < size; i++) {
-    arr[i] = 1.0 * multiplier; // Assigning each element the value 1
-  }
-}
 
 class AddTest : public ::testing::Test {
  protected:
@@ -92,7 +82,7 @@ TEST_F(AddTest, ToArrayofZeros) {
 	Add* add = new Add();
 
 	fillArrayWithRandom(in->act, in->size);
-	fillArrayWithOnes(out->act, out->size, 0.0f); // Fill with zeros instead of ones
+  std::memset(out->act, 0, out->size * sizeof(float)); // fill array with zeros
 
 	add->forward(out, in);
 
