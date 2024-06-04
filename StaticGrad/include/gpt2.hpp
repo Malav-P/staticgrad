@@ -20,8 +20,6 @@ class GPT2 {
             NH(NH_){
                 num_params = gpt2_memrequirement(C, L, V, maxT);
 
-                std::cout << "Number of parameters: " << num_params << std::endl;
-
                 params = new float[num_params];
                 grad = new float[num_params];
 

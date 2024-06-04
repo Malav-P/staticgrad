@@ -59,7 +59,26 @@ TEST_F(DataStreamTest, loadbuffer) {
     ds->load_buffer();
     EXPECT_NE(ds->buffer[0], 50256); // first token will generally not be the eot token
 
-    
+}
+
+TEST_F(DataStreamTest, load_weights) {
+
+    std::string filepath = "/Users/malavpatel/Coding_Projects/StaticGrad/models/gpt2.bin";
+
+    int num_params = 124439808;
+    auto params = new float[num_params]; // num parameters in gpt2 is 124439808
+
+
+    EXPECT_NO_THROW(load_weights(params, filepath));
+
+    int wrong_expected_bytes = 10;
+    EXPECT_THROW(load_weights(params, filepath, wrong_expected_bytes), std::runtime_error);
+
+    int correct_expected_bytes = num_params*sizeof(float);
+    EXPECT_NO_THROW(load_weights(params, filepath, correct_expected_bytes));
+
+    delete[] params;
+
 }
 
 

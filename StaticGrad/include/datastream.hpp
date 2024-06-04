@@ -33,5 +33,6 @@ class DataStream {
 
 };
 
+void load_weights(float* dest, const std::string& fname, int expected_bytes = -1);
 
 #endif // DATASTREAM_HPP
