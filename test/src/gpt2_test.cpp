@@ -228,6 +228,28 @@ TEST_F(GPT2Test, ZeroGrad) {
     for (int i = 0; i < gpt2->num_params; i++) {
         EXPECT_FLOAT_EQ(gpt2->grad[i], 0.0f);
     }
+
+    delete gpt2;
+}
+
+TEST_F(GPT2Test, Update) {
+    // Create a GPT2 object
+    C = 768;
+    L = 12;
+    V = 50257;
+    maxT = 1024;
+    NH = 16;
+
+    GPT2* gpt2 = new GPT2(C, L, V, maxT, NH);
+
+    fillArrayWithRandom(gpt2->grad, gpt2->num_params);
+
+    EXPECT_NO_THROW(gpt2->update(1));
+
+    for (int i = 0; i < gpt2->num_params; i++){
+        EXPECT_FLOAT_EQ(gpt2->m[i], (1 - gpt2->beta1) * gpt2->grad[i]);
+        EXPECT_FLOAT_EQ(gpt2->v[i], (1 - gpt2->beta2) * gpt2->grad[i] * gpt2->grad[i] );
+    }
 }
 
 int main(int argc, char **argv) {

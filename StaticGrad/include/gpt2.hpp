@@ -17,11 +17,17 @@ class GPT2 {
             L(L_),
             V(V_),
             maxT(maxT_),
-            NH(NH_){
+            NH(NH_),
+            beta1(0.9),
+            beta2(0.999),
+            alpha(0.001){
                 num_params = gpt2_memrequirement(C, L, V, maxT);
 
                 params = new float[num_params];
                 grad = new float[num_params];
+
+                m = new float[num_params](); // parentheses here initialize array to zero
+                v = new float[num_params]();
 
                 float* p = params;
                 float* g = grad;
@@ -70,6 +76,8 @@ class GPT2 {
             std::memset(grad, 0, num_params * sizeof(float));
         }
 
+        void update(int t); //  TODO
+
 
         void forward(Node* out, Node* in);
         void backward(Node* out, Node* in);
@@ -90,6 +98,13 @@ class GPT2 {
 
         float* params;
         float* grad;
+
+
+        float* m; // first moment for adam
+        float* v; // second moment for adam
+        float beta1;
+        float beta2;
+        float alpha; // learn rate
 
 };
 

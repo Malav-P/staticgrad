@@ -3,7 +3,7 @@
 
 void fillArrayWithRandom(float* arr, int size) {
   for (int i = 0; i < size; i++) {
-    arr[i] = ((float)rand() / RAND_MAX)*2.0f - 1.0f; // Generates a random float between 0 and 1
+    arr[i] = ((float)rand() / RAND_MAX)*2.0f - 1.0f; // Generates a random float between -1 and 1
   }
 }
 

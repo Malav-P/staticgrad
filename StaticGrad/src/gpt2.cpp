@@ -65,6 +65,22 @@ size_t gpt2_memrequirement(size_t C, size_t L, size_t vocab_size, size_t max_seq
 
 };
 
+void GPT2::update(int t){
+    for (int i = 0; i < num_params; i++){
+        float g_ = grad[i];
+
+        m[i] = beta1 * m[i] + (1-beta1)*g_;
+        v[i] = beta2 * v[i] + (1-beta2)*g_*g_;
+
+        float mhat = m[i] / (1 - powf(beta1, t));
+        float vhat = v[i] / (1 - powf(beta2, t));
+
+
+        params[i] -= alpha * mhat / (sqrtf(vhat) + 1e-8);
+
+    }
+}
+
 void GPT2::forward(Node* out, Node* in){
     // in is shape (B, T)
     // out is shape (B, T, V)
