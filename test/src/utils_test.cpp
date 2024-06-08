@@ -39,7 +39,12 @@ class UtilsTest : public ::testing::Test {
   Node* out;
 };
 
-
+/**
+ * @brief Test that the crossentropy_forward function can compute the cross-entropy loss successfully.
+ *
+ * This test sets up a scenario where the input node contains a softmax output, and the target node contains the true labels.
+ * It then calls the crossentropy_forward function and verifies that the output node's activation is correctly computed as the cross-entropy loss.
+ */
 TEST_F(UtilsTest, crossentropyforward) {
 
     int targets[] = {8}; // token ID of the target. We only have one because B = T = 1 for the test
@@ -53,6 +58,12 @@ TEST_F(UtilsTest, crossentropyforward) {
     EXPECT_FLOAT_EQ(out->act[0], -std::logf(softmax_out[targets[0]]));
 }
 
+/**
+ * @brief Test that the crossentropy_softmax_backward function can compute the gradients of the cross-entropy loss with respect to the input node's activations successfully.
+ *
+ * This test sets up a scenario where the output node contains a softmax output, and the target node contains the true labels.
+ * It then calls the crossentropy_softmax_backward function and verifies that the input node's activation gradients are correctly computed.
+ */
 TEST_F(UtilsTest, crossentropy_softmax_backward) {
 
     int targets[] = {8}; // token ID of the target. We only have one because B = T = 1 for the test
@@ -61,15 +72,60 @@ TEST_F(UtilsTest, crossentropy_softmax_backward) {
         out->act[i] = softmax_out[i];
     }
 
-    EXPECT_NO_THROW(crossentropy_softmax_backward(out, in, targets));
+    float temp = 1.0f;
+
+    EXPECT_NO_THROW(crossentropy_softmax_backward(out, in, targets, temp));
 
     for(int i = 0; i < V; i++){
         float indicator = (i == targets[0]) ? 1.0f : 0.0f;
-        float expected = (softmax_out[i] - indicator) / (B*T);
+        float expected = (softmax_out[i] - indicator) / (B*T) / temp;
         EXPECT_FLOAT_EQ(in->act_grads[i], expected);
     }
     
 }
+
+TEST_F(UtilsTest, InvalidInputTest) {
+    float probabilities[] = {0.1, 0.2, -0.3, 0.4};
+    int length = sizeof(probabilities) / sizeof(probabilities[0]);
+
+    // Check that the function throws an exception when given invalid input
+    EXPECT_THROW(sample_token(probabilities, length), std::invalid_argument);
+}
+
+TEST_F(UtilsTest, InvalidSum) {
+    float probabilities[] = {0.1, 0.2, 0.3, 0.3};
+    int length = sizeof(probabilities) / sizeof(probabilities[0]);
+
+    // Check that the function throws an exception when given invalid input
+    EXPECT_THROW(sample_token(probabilities, length), std::invalid_argument);
+}
+
+TEST_F(UtilsTest, sample_token) {
+    float probabilities[] = {0.4, 0.1, 0.2, 0.3};
+    int length = sizeof(probabilities) / sizeof(float);
+
+    EXPECT_NO_THROW(int token = sample_token(probabilities, length));
+
+    int* counts = new int[length];
+    for (int i = 0; i < 10000; i++){
+        int token = sample_token(probabilities, 4, true);
+        
+        counts[token] += 1;
+        
+    }
+
+    for (int i = 0; i < length; i++){
+        EXPECT_NEAR(counts[i], 10000*probabilities[i], 200);
+    }
+
+    delete[] counts;
+
+
+    // test non-random portion
+    EXPECT_EQ(sample_token(probabilities, length), 0);
+
+}
+
 
 
 
