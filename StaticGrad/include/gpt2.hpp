@@ -78,7 +78,11 @@ class GPT2 {
             std::memset(grad, 0, num_params * sizeof(float));
         }
 
-        void update(int t); //  TODO
+        void set_temperature(float temp){
+            softmax->set_temperature(temp);
+        }
+
+        void update(int t); 
 
 
         void forward(Node* out, Node* in);

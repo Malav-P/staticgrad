@@ -149,6 +149,8 @@ class Softmax : public Operation {
         void forward(Node* out, Node* in) override;
         void backward(Node* out, Node* in) override;
 
+        void set_temperature(float temp);
+
 };
 
 class RowAdd : public Operation {

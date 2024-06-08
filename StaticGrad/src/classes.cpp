@@ -802,3 +802,7 @@ void Softmax::backward(Node* out, Node* in){
     }
 }
 
+void Softmax::set_temperature(float temp){
+    temperature = temp;
+}
+
