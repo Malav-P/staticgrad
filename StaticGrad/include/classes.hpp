@@ -140,7 +140,10 @@ class Add : public Operation {
 class Softmax : public Operation {
     public:
 
-        Softmax():
+        float temperature;
+
+        Softmax(float temp):
+            temperature(temp),
             Operation(nullptr, nullptr){}
 
         void forward(Node* out, Node* in) override;

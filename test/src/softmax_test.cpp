@@ -36,7 +36,7 @@ class SoftmaxTest : public ::testing::Test {
 };
 
 TEST_F(SoftmaxTest, RandomInput) {
-	Softmax* softmax = new Softmax();
+	Softmax* softmax = new Softmax(1.0f);
 
 	fillArrayWithRandom(in->act, in->size);
 
@@ -63,7 +63,7 @@ TEST_F(SoftmaxTest, RandomInput) {
 }
 
 TEST_F(SoftmaxTest, LargeNegativeActivation) {
-	Softmax* softmax = new Softmax();
+	Softmax* softmax = new Softmax(1.0f);
 
 	// Initialize input data such that the sum of all exponentials is zero
 	for (int i = 0; i < in->size; i++){
@@ -84,7 +84,7 @@ TEST_F(SoftmaxTest, BackwardPass) {
 	out->act_grads = new float[out->size];
 	in->act_grads = new float[in->size];
 
-	Softmax* softmax = new Softmax();
+	Softmax* softmax = new Softmax(1.0f);
 
 	// Initialize out data 
 	for (size_t i = 0; i < in->size; i++){
@@ -112,7 +112,7 @@ TEST_F(SoftmaxTest, BackwardPassRandom) {
 	in->act_grads= new float[B*T*V];
 	out->act_grads = new float[B*T*V];
 
-	Softmax* softmax = new Softmax();
+	Softmax* softmax = new Softmax(1.0f);
 
 	float arr[] = {0.2f, 0.3f, 0.4f, 0.1f};
 

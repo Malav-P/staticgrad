@@ -49,7 +49,9 @@ class GPT2 {
 
                 unembedding = new Matmul(params, grad);
 
-                softmax = new Softmax();
+
+                float temperature = 1.0f;
+                softmax = new Softmax(temperature);
 
                 if (p - params != num_params || g - grad != num_params){
                     throw std::runtime_error("parameter allocation incorrect");

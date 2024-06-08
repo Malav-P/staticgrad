@@ -762,7 +762,7 @@ void Softmax::forward(Node* out, Node* in){
             float exp_sum = 0.0f;
             float exp_val = 0.0f;
             for (size_t v = 0; v < V; v++){
-                exp_val = expf(bt_arr[v] - maxval);
+                exp_val = expf((bt_arr[v] - maxval)/temperature);
                 out_bt_arr[v] = exp_val;
                 exp_sum += exp_val;
             }
@@ -795,7 +795,7 @@ void Softmax::backward(Node* out, Node* in){
                 
                 for (size_t i = 0; i < V ; i++){
                     local_deriv = bt_out[i] * ((i == v ? 1.0f : 0.0f) - bt_out[v]);
-                    bt_in_grad[v] += bt_out_grad[i] * local_deriv;
+                    bt_in_grad[v] += bt_out_grad[i] * local_deriv / temperature;
                 }
             }
         }
