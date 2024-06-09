@@ -26,9 +26,9 @@ BIN_DIR = test/bin
 # Source files
 SOURCES = StaticGrad/src/classes.cpp test/src/test_common.cpp
 
-.PHONY: all clean run
+.PHONY: all clean run tokenizer
 
-all: att add layernorm matmul softmax encoder transformerblock gpt2 utils datastream
+all: att add layernorm matmul softmax encoder transformerblock gpt2 utils datastream tokenizer
 
 att: test/src/att_test.cpp $(SOURCES)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/att_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
@@ -59,6 +59,9 @@ utils: test/src/utils_test.cpp StaticGrad/src/utils.cpp $(SOURCES)
 
 datastream: test/src/datastream_test.cpp StaticGrad/src/datastream.cpp
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/datastream_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
+
+tokenizer: test/src/tokenizer_test.cpp StaticGrad/src/tokenizer.cpp
+	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/tokenizer_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
 
 
 clean:
