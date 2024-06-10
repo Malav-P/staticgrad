@@ -1,3 +1,2 @@
 .vscode
-tokenizer/tokens/
-models/*.bin
+*.bin

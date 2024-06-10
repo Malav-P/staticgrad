@@ -9,6 +9,10 @@ def write_gpt2_vocab():
 
     output_path = os.path.join(os.path.dirname(__file__), "gpt2_vocab.bin")
 
+    # Check if the output path is a valid directory
+    if not os.path.isdir(os.path.dirname(output_path)):
+        raise ValueError("Invalid output directory")
+
 
     n = encoder.max_token_value
 

@@ -286,7 +286,7 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
             for (size_t nh = 0 ; nh < num_heads; nh++){
 
                 // get buffer1
-                float* buffer1 = buffer + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
+                float* pre_softmax = buffer + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
 
                 // get query vector
                 float* q = in->act + b * T * 3*C + t * 3*C + nh * head_size;
@@ -309,24 +309,24 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
                         maxval = score;
                     }   
 
-                    buffer1[t2] = score;       
+                    pre_softmax[t2] = score;       
 
                 }
 
-                float* buffer2 = buffer + half_buffer_size + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
+                float* post_softmax = buffer + half_buffer_size + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
 
                 // normalize scores according to softmax
                 float exp_sum = 0;
                 for (size_t t2 = 0; t2 <= t; t2++){
-                    float exp_score = expf(buffer1[t2] - maxval);
-                    buffer2[t2] = exp_score;
+                    float exp_score = expf(pre_softmax[t2] - maxval);
+                    post_softmax[t2] = exp_score;
                     exp_sum += exp_score;
                 }
 
                 float exp_sum_inv = exp_sum == 0 ? 0.0f : 1 / exp_sum;
 
                 for (size_t t2 = 0; t2 <= t; t2++){
-                    buffer2[t2] *= exp_sum_inv;
+                    post_softmax[t2] *= exp_sum_inv;
                 }
 
 
@@ -343,7 +343,7 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
                     float* v_t2 = in->act + b * T * 3*C + t2 * 3*C + C + C + nh * head_size;
 
                     for (size_t i=0; i < head_size; i++){
-                        out_act[i] += buffer2[t2] * v_t2[i];
+                        out_act[i] += post_softmax[t2] * v_t2[i];
                     }
                 }
     
@@ -368,7 +368,7 @@ void Attention::backward(Node* out, Node* in) {
     int half_buffer_size = num_heads*B*lrint(T*(T+1)/2);
 
     delete[] dbuffer;
-    dbuffer = new float[2*half_buffer_size];
+    dbuffer = new float[2*half_buffer_size]{0};
 
 
     for (size_t b = 0 ; b < B; b++){
@@ -381,8 +381,8 @@ void Attention::backward(Node* out, Node* in) {
                 float* out_g = out->act_grads + b * T * C + t * C + nh * head_size;
 
                 // get dbuffer2 and buffer2
-                float* dbuffer2 = dbuffer + half_buffer_size + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
-                float* buffer2 = buffer + half_buffer_size + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
+                float* dpost_softmax = dbuffer + half_buffer_size + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
+                float* post_softmax = buffer + half_buffer_size + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
 
 
                 // backward through accumulation 
@@ -392,19 +392,27 @@ void Attention::backward(Node* out, Node* in) {
                     float* v_t2  = in->act       + b * T * 3*C + t2 * 3*C + C + C + nh * head_size;
 
                     for (size_t i=0; i < head_size; i++){
-                        dbuffer2[t2] += out_g[i] * v_t2[i];
-                        dv_t2[t2] += out_g[i] * buffer2[t2];
+                        dpost_softmax[t2] += out_g[i] * v_t2[i];
+
+                        dv_t2[t2] += out_g[i] * post_softmax[t2];
+
                     }
                 }
 
                 // get dbuffer1
-                float* dbuffer1 = dbuffer + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
+                float* dpre_softmax = dbuffer + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
 
-                // backward through softmax buffer2 = softmax(buffer1)
+                // backward through softmax post_softmax = softmax(buffer1)
                 for (size_t t2 = 0; t2 <= t; t2++){
                     for (size_t t3 = 0; t3 <= t; t3++){
-                        dbuffer1[t2] += dbuffer2[t3] * buffer2[t3] * ((t2 == t3 ? 1.0f : 0.0f) - buffer2[t2] ); 
+                        float local_deriv = post_softmax[t3] * ((t2 == t3 ? 1.0f : 0.0f) - post_softmax[t2] );
+                        dpre_softmax[t2] += dpost_softmax[t3] * local_deriv; 
                     }
+                    
+                    // for debugging, can remove
+                    // if (dpre_softmax[t2] == 0.0){
+                    //     std::cout << t << " " << t2 << " " << nh << " " << post_softmax[t2] << std::endl;
+                    // }
                 }
 
 
@@ -418,10 +426,9 @@ void Attention::backward(Node* out, Node* in) {
                     float* dk_t2 = in->act_grads + b * T * 3*C + t2 * 3*C + C + nh * head_size;
 
                     for (size_t i = 0; i < head_size; i++){
-                        dq[i] += dbuffer1[t2] * k_t2[i] / sqrtf(head_size);
-                        dk_t2[i] += dbuffer1[t2] * q[i] / sqrtf(head_size);
+                        dq[i] += dpre_softmax[t2] * k_t2[i] / sqrtf(head_size);
+                        dk_t2[i] += dpre_softmax[t2] * q[i] / sqrtf(head_size);
                     }
-
                     
                 }
             }

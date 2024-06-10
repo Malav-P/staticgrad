@@ -12,7 +12,6 @@ class Tokenizer {
 
         std::unordered_map<int, std::string> token_map;
 
-
         Tokenizer(std::string& filename);
 };
 
