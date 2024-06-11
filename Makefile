@@ -1,9 +1,7 @@
 # Compiler (g++ or clang++ both work)
 CC = g++
-
 # Compiler flags
 CXXFLAGS = -std=c++17 -framework Accelerate -DACCELERATE_NEW_LAPACK #-Wall
-
 # address sanitizer
 ADDRESS_SANITIZER = -fsanitize=address -fno-omit-frame-pointer
 
@@ -13,22 +11,22 @@ endif
 
 # Library directories
 LIB_DIRS = -L/opt/homebrew/lib
-
 # Libraries to link against
 LIBS = -lgtest -lgtest_main -pthread
-
 # Include dirs
 INCLUDE_DIRS = -I./StaticGrad/include/ -I./test/include/ -I/opt/homebrew/include/
 
 # Binary directory
 BIN_DIR = test/bin
-
 # Source files
 SOURCES = StaticGrad/src/classes.cpp test/src/test_common.cpp
 
-.PHONY: all clean run tokenizer
+TESTS = att add layernorm matmul softmax encoder transformerblock gpt2 utils datastream tokenizer
 
-all: att add layernorm matmul softmax encoder transformerblock gpt2 utils datastream tokenizer
+
+.PHONY: all clean run $(TESTS)
+
+all: $(TESTS)
 
 att: test/src/att_test.cpp $(SOURCES)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/att_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)

@@ -355,47 +355,48 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
 }
 
 void Attention::backward(Node* out, Node* in) {
+    // Get the batch size, sequence length, and number of channels
     size_t B = in->shape[0];
     size_t T = in->shape[1];
     size_t C = in->shape[2] / 3;
 
+    // Calculate the size of each attention head
     size_t head_size = C / num_heads;
 
+    // Check if the buffer has been allocated properly
     if (buffer == nullptr){
-        std::__throw_runtime_error("buffer was not allocated and filled properly. This may be because backward() was called before forward()");
+        std::__throw_runtime_error("buffer was not allocated properly. This may be because backward() was called before forward()");
     }
 
+    // Allocate memory for the gradients of the buffer
     int half_buffer_size = num_heads*B*lrint(T*(T+1)/2);
-
     delete[] dbuffer;
     dbuffer = new float[2*half_buffer_size]{0};
 
-
+    // Iterate over each batch
     for (size_t b = 0 ; b < B; b++){
-
+        // Iterate over each token
         for (size_t t = 0; t < T; t++){
-
+            // Iterate over each attention head
             for (size_t nh = 0 ; nh < num_heads; nh++){
 
-                // get output grad
+                // Get the output gradient
                 float* out_g = out->act_grads + b * T * C + t * C + nh * head_size;
 
-                // get dbuffer2 and buffer2
-                float* dpost_softmax = dbuffer + half_buffer_size + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
+                // Get the softmax output and gradients of the softmax output
                 float* post_softmax = buffer + half_buffer_size + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
+                float* dpost_softmax = dbuffer + half_buffer_size + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
 
-
-                // backward through accumulation 
+                // Backward pass through the accumulation of the softmax output and value vector
                 for (size_t t2 = 0; t2 <= t; t2++){
-                    // find value vector and its grad for t2 token
+                    // Get value vector and its gradient for t2-th token
                     float* dv_t2 = in->act_grads + b * T * 3*C + t2 * 3*C + C + C + nh * head_size;
                     float* v_t2  = in->act       + b * T * 3*C + t2 * 3*C + C + C + nh * head_size;
 
+                    // Calculate the gradient of post_softmax and the value vector
                     for (size_t i=0; i < head_size; i++){
                         dpost_softmax[t2] += out_g[i] * v_t2[i];
-
                         dv_t2[t2] += out_g[i] * post_softmax[t2];
-
                     }
                 }
 

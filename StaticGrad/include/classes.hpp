@@ -2,9 +2,7 @@
 #define CLASSES_HPP
 
 #include <vector>
-#include <set>
 #include <stdexcept>
-#include <memory>
 #include <iostream>
 #include <Accelerate/Accelerate.h>
 
