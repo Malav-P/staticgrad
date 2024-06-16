@@ -23,7 +23,7 @@ TEST_F(TokenizerTest, Constructor) {
 
 }
 
-TEST_F(TokenizerTest, FirstTwoToken) {
+TEST_F(TokenizerTest, Decode) {
 
     std::string filename = "/Users/malavpatel/Coding_Projects/StaticGrad/tokenizer/gpt2_vocab.bin";
 
@@ -36,6 +36,31 @@ TEST_F(TokenizerTest, FirstTwoToken) {
     std::string expected = "!\"";
 
     EXPECT_TRUE(decoded == expected);
+
+    // use std::vector container for tokens. this one is for "hello world"
+    std::vector<int> tokenids{31373, 995};
+
+    decoded = tk.decodeSequence(tokenids);
+    EXPECT_TRUE(decoded == "hello world");
+}
+
+TEST_F(TokenizerTest, Encode) {
+    std::string filename = "/Users/malavpatel/Coding_Projects/StaticGrad/tokenizer/gpt2_vocab.bin";
+    Tokenizer tk = Tokenizer(filename);
+
+    std::string str = "hello world";
+    std::vector<int> tokenIDs = tk.encode(str);
+
+    EXPECT_GT(tokenIDs.size(), 0);
+
+    std::cout << "encoded: ";
+    for (auto token : tokenIDs){
+        std::cout << token << ", ";
+    }
+    std::cout << std::endl;
+
+    std::string decoded = tk.decodeSequence(tokenIDs);
+    std::cout << "decoded: " <<  decoded << std::endl;
 }
 
 TEST_F(TokenizerTest, EdgeCases) {

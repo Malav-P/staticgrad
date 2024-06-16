@@ -46,3 +46,40 @@ std::string Tokenizer::decodeSequence(int* tokenIDs, int length) {
 
     return result;
 }
+
+std::string Tokenizer::decodeSequence(std::vector<int>& tokenIDs) {
+
+    std::string result;
+    for (int i = 0; i < tokenIDs.size(); i++) {
+        int key = tokenIDs[i];
+        if (key < 0 || key >= token_map.size()){
+            throw std::out_of_range("key is out of range of vocab size");
+        }
+        result += token_map[key];
+    }
+
+    return result;
+}
+
+std::vector<int> Tokenizer::encode(const std::string& str) {
+    std::vector<int> tokenIDs;
+    std::string remainingStr = str;
+
+    while (!remainingStr.empty()) {
+        bool found = false;
+        for (const auto& pair : token_map) {
+            if (remainingStr.find(pair.second) == 0) {
+                tokenIDs.push_back(pair.first);
+                remainingStr.erase(0, pair.second.size());
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            throw std::runtime_error("Unknown token in input string");
+        }
+    }
+
+    return tokenIDs;
+}

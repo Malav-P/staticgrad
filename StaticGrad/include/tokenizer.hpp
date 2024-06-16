@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <unordered_map>
+#include <vector>
 
 
 class Tokenizer {
@@ -15,6 +16,9 @@ class Tokenizer {
         Tokenizer(const std::string& filename);
 
         std::string decodeSequence(int* tokenIDs, int length);
+        std::string decodeSequence(std::vector<int>& tokenIDs);
+
+        std::vector<int> encode(const std::string& str);
 };
 
 #endif // TOKENIZER_HPP
