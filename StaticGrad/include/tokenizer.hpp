@@ -12,7 +12,9 @@ class Tokenizer {
 
         std::unordered_map<int, std::string> token_map;
 
-        Tokenizer(std::string& filename);
+        Tokenizer(const std::string& filename);
+
+        std::string decodeSequence(int* tokenIDs, int length);
 };
 
 #endif // TOKENIZER_HPP
