@@ -81,7 +81,31 @@ int sample_token(float* probabilities, int length, bool random){
         return std::distance(probabilities, std::max_element(probabilities, probabilities + length));
 
     }
-
-
     
+}
+
+void load_weights(float* dest, const std::string& fname, int expected_bytes){
+
+    // Open the file in binary mode
+    std::ifstream inputFile(fname, std::ios::binary);
+
+    if (!inputFile.is_open()){
+        throw std::runtime_error("could not open file");
+    }
+
+    // Get the size of the file
+    inputFile.seekg(0, std::ios::end);
+    std::streamsize fileSize = inputFile.tellg();
+    inputFile.seekg(0, std::ios::beg);
+
+    if (expected_bytes != -1){
+        if (expected_bytes != fileSize){
+            throw std::runtime_error("number of bytes in file does not match expected");
+        }
+    }
+
+    // Read the contents of the file into the buffer
+    if (!inputFile.read(reinterpret_cast<char*>(dest), fileSize)) {
+        throw std::runtime_error("error loading contents into buffer");
+    }
 }

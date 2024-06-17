@@ -39,6 +39,25 @@ TEST_F(GPT2Test, Constructor) {
     EXPECT_EQ(model->tblocks.size(), L); // expect L transformer blocks
 }
 
+TEST_F(GPT2Test, DefaultConstructor) {
+    C = 768; // embedding dimension
+    L = 12; // number of transformer blocks
+    V = 50257; // vocab size
+    maxT = 1024; // max sequence length
+    NH = 12; // number of attention heads
+
+    GPT2* model;
+
+    EXPECT_NO_THROW(model = new GPT2());
+
+    EXPECT_EQ(model->tblocks.size(), L); // expect L transformer blocks
+    EXPECT_EQ(model->C, C);
+    EXPECT_EQ(model->L, L);
+    EXPECT_EQ(model->V, V);
+    EXPECT_EQ(model->maxT, maxT);
+    EXPECT_EQ(model->NH, NH);
+}
+
 TEST_F(GPT2Test, Forward) {
     C = 768; // embedding dimension
     L = 12; // number of transformer blocks

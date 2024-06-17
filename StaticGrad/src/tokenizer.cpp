@@ -31,7 +31,7 @@ Tokenizer::Tokenizer(const std::string& filename){
 
 }
 
-std::string Tokenizer::decodeSequence(int* tokenIDs, int length) {
+std::string Tokenizer::decode(int* tokenIDs, int length) {
     if (tokenIDs == nullptr){
         throw std::invalid_argument("input array is null");
     }
@@ -47,7 +47,7 @@ std::string Tokenizer::decodeSequence(int* tokenIDs, int length) {
     return result;
 }
 
-std::string Tokenizer::decodeSequence(std::vector<int>& tokenIDs) {
+std::string Tokenizer::decode(const std::vector<int>& tokenIDs) {
 
     std::string result;
     for (int i = 0; i < tokenIDs.size(); i++) {
@@ -67,16 +67,23 @@ std::vector<int> Tokenizer::encode(const std::string& str) {
 
     while (!remainingStr.empty()) {
         bool found = false;
+        int maxLength = 0;
+        int maxTokenId = -1;
+
         for (const auto& pair : token_map) {
             if (remainingStr.find(pair.second) == 0) {
-                tokenIDs.push_back(pair.first);
-                remainingStr.erase(0, pair.second.size());
-                found = true;
-                break;
+                if (pair.second.size() > maxLength) {
+                    maxLength = pair.second.size();
+                    maxTokenId = pair.first;
+                    found = true;
+                }
             }
         }
 
-        if (!found) {
+        if (found) {
+            tokenIDs.push_back(maxTokenId);
+            remainingStr.erase(0, maxLength);
+        } else {
             throw std::runtime_error("Unknown token in input string");
         }
     }
