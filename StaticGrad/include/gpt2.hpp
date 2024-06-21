@@ -26,13 +26,13 @@ class GPT2 {
         void forward(Node* out, Node* in);
         void backward(Node* out, Node* in);
 
-        size_t C;    // embedding dimension (default 768)
-        size_t L;    // number of transformer blocks (default 12)
-        size_t V;    // vocab size (default 50257)
-        size_t maxT; // max sequence length (default 1024)
-        size_t NH; // number of attention heads
+        const size_t C;    // embedding dimension (default 768)
+        const size_t L;    // number of transformer blocks (default 12)
+        const size_t V;    // vocab size (default 50257)
+        const size_t maxT; // max sequence length (default 1024)
+        const size_t NH; // number of attention heads
 
-        size_t num_params;
+        size_t num_params; // number of parameters
 
         Encoder* encoder; // encoder
         std::vector<TransformerBlock*> tblocks; // vector of TransformerBlocks

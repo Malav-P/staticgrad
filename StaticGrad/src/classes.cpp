@@ -45,6 +45,7 @@ void shift_back(Node* out, Node* in, std::vector<size_t> shape_){
 }
 
 void Encoder::forward(Node* out, Node* in){
+
     size_t B = in->shape[0];
     size_t T = in->shape[1];
 
@@ -56,8 +57,8 @@ void Encoder::forward(Node* out, Node* in){
             // get token_id (lrint casts the double to a long int)
             long int token_id = lrint(in->act[b*T + t]);
             
-            // seek to token embedding, wte is (C, V)
-            float* token_embed = wte + token_id;
+            // seek to token embedding, wte is (V, C)
+            float* token_embed = wte + token_id*C;
 
             // seek to position emebedding, wpe is (maxT, C)
             float* pos_embed = wpe + t*C;
@@ -66,7 +67,7 @@ void Encoder::forward(Node* out, Node* in){
             float* output = out->act + b*T*C + t*C;
 
             for (size_t i = 0; i < C; i++){
-                output[i] = token_embed[i*vocab_size] + pos_embed[i];
+                output[i] = token_embed[i] + pos_embed[i];
             }
         }
     }
@@ -74,8 +75,8 @@ void Encoder::forward(Node* out, Node* in){
 
 void Encoder::backward(Node* out, Node* in){
 
-    // output is (B, T, C)
-    // wte is (C, V)
+    // out is (B, T, C)
+    // wte is (V, C)
     // wpe is (maxT, C)
 
     size_t B = in->shape[0];
@@ -89,8 +90,8 @@ void Encoder::backward(Node* out, Node* in){
             // get token_id (lrint casts the double to a long int)
             long int token_id = lrint(in->act[b*T + t]);
             
-            // seek to token embedding grad, wte_g is (C, V)
-            float* token_embed_g = wte_g + token_id;
+            // seek to token embedding grad, wte_g is (V, C)
+            float* token_embed_g = wte_g + token_id*C;
 
             // seek to position emebedding, wpe_g is (maxT, C)
             float* pos_embed_g = wpe_g + t*C;
@@ -100,7 +101,7 @@ void Encoder::backward(Node* out, Node* in){
 
             for (size_t i = 0; i < C; i++){
                 float deriv = output_g[i];
-                token_embed_g[i*vocab_size] += deriv;
+                token_embed_g[i] += deriv;
                 pos_embed_g[i] += deriv;
             }
         }
@@ -108,6 +109,96 @@ void Encoder::backward(Node* out, Node* in){
     
 }
 
+/**
+ * Constructor for the TransformerBlock class.
+ *
+ * Args:
+ *   params_: The parameters for the transformer block.
+ *   grad_: The gradients for the transformer block.
+ *   C: The number of channels.
+ *   NH: The number of heads.
+ *   maxT: The maximum sequence length.
+ *
+ * Throws:
+ *   std::invalid_argument if C is not divisible by NH.
+ */
+TransformerBlock::TransformerBlock(float* params_, float* grad_, size_t C, size_t NH, size_t maxT):
+    Operation(params_, grad_),
+    res1_node(nullptr),
+    res2_node(nullptr) {
+
+        if (C % NH != 0){
+            throw std::invalid_argument("C must be divisible by NH");
+        }
+
+        res1_node = new Node();
+        res2_node = new Node();
+
+        float* layer_param = params_;
+        float* layer_grad = grad_;
+
+
+        ln1 = new LayerNorm(layer_param, layer_grad);
+        layer_param += C + C; // C weights and C biases
+        layer_grad += C + C;
+
+
+        mat1 = new Matmul(layer_param, layer_grad);
+        layer_param += C * 3*C;
+        layer_grad +=  C * 3*C;
+
+
+        ra1 = new RowAdd(layer_param, layer_grad);
+        layer_param += 3*C;
+        layer_grad += 3*C;
+
+        att = new Attention(NH, maxT);
+
+        mat2 = new Matmul(layer_param, layer_grad);
+        layer_param += C*C;
+        layer_grad +=  C*C;
+
+        ra2 = new RowAdd(layer_param, layer_grad);
+        layer_param += C;
+        layer_grad += C;
+
+        res1 = new Add();
+
+        ln2 = new LayerNorm(layer_param, layer_grad);
+        layer_param += C + C;
+        layer_grad += C + C;
+
+        mat3 = new Matmul(layer_param, layer_grad);
+        layer_param += C * 4*C;
+        layer_grad += C * 4*C;
+
+        ra3 = new RowAdd(layer_param, layer_grad);
+        layer_param += 4*C;
+        layer_grad += 4*C;
+
+        gelu = new GELU();
+
+        mat4 = new Matmul(layer_param, layer_grad);
+        layer_param += 4*C * C;
+        layer_grad += 4*C * C;
+
+        ra4 = new RowAdd(layer_param, layer_grad);
+        layer_param += C;
+        layer_grad += C;
+
+        res2 = new Add();
+}
+
+/**
+ * Performs a forward pass through the transformer block.
+ *
+ * Args:
+ *   out: The output node.
+ *   in: The input node.
+ *
+ * Throws:
+ *   std::runtime_error if the output node and internal output node are not equal. This indicates that activations were not written correctly.
+ */
 void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
     size_t B = in->shape[0];
     size_t T = in->shape[1];
@@ -137,7 +228,7 @@ void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
 
     // first matmul and bias
     shift(out_internal, in_internal, {B, T, 3*C});
-    mat1->forward(out_internal, in_internal);
+    mat1->forward2(out_internal, in_internal);
     ra1->forward(out_internal, out_internal); // in place
     
     // attention
@@ -146,7 +237,7 @@ void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
 
     // second matmul and bias
     shift(out_internal, in_internal, {B, T, C});
-    mat2->forward(out_internal, in_internal);
+    mat2->forward2(out_internal, in_internal);
     ra2->forward(out_internal, out_internal); // in place
     
     // residual
@@ -164,7 +255,7 @@ void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
 
     // third matmul and bias
     shift(out_internal, in_internal, {B, T, 4*C});
-    mat3->forward(out_internal, in_internal); // (B, T, C) -> (B, T, 4*C)
+    mat3->forward2(out_internal, in_internal); // (B, T, C) -> (B, T, 4*C)
     ra3->forward(out_internal, out_internal); // in place (B, T, 4*C) -> (B, T, 4*C)
 
     // GELU
@@ -173,7 +264,7 @@ void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
 
     // fourth matmul and bias
     shift(out_internal, in_internal, {B, T, C});
-    mat4->forward(out_internal, in_internal);
+    mat4->forward2(out_internal, in_internal);
     ra4->forward(out_internal, out_internal); // in place (B, T, 4C) -> (B, T, C)
 
     // second residual
@@ -190,6 +281,16 @@ void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
 
 }
 
+/**
+ * Performs a backward pass through the transformer block.
+ *
+ * Args:
+ *   out: The output node.
+ *   in: The input node.
+ *
+ * Throws:
+ *   std::runtime_error if the input node and internal input node are not equal.
+ */
 void TransformerBlock::backward(Node* out, Node* in){
 
     size_t B = in->shape[0];
@@ -213,7 +314,7 @@ void TransformerBlock::backward(Node* out, Node* in){
 
     // backward through fourth matmul and bias
     ra4->backward(out_internal, out_internal);
-    mat4->backward(out_internal, in_internal);
+    mat4->backward2(out_internal, in_internal);
 
     // backward through GELU
     shift_back(out_internal, in_internal, {B, T, 4*C}); // (B, T, 4*C) is input shape of GELU operation
@@ -222,7 +323,7 @@ void TransformerBlock::backward(Node* out, Node* in){
     // backward through third matmul and bias
     shift_back(out_internal, in_internal, {B, T, C}); // (B, T, C) is input shape of matmul operation
     ra3->backward(out_internal, out_internal);
-    mat3->backward(out_internal, in_internal);
+    mat3->backward2(out_internal, in_internal);
 
     // backward through second layernorm
     shift_back(out_internal, in_internal, {B, T, C}); // (B, T, C) is the input shape of layernorm operation
@@ -234,7 +335,7 @@ void TransformerBlock::backward(Node* out, Node* in){
 
     // backward through second matmul and bias
     ra2->backward(out_internal, out_internal);
-    mat2->backward(out_internal, in_internal);
+    mat2->backward2(out_internal, in_internal);
 
     // backward through attention
     shift_back(out_internal, in_internal, {B, T, 3*C}); // (B, T, 3*C) is input shape of attention
@@ -243,7 +344,7 @@ void TransformerBlock::backward(Node* out, Node* in){
     // backward through first matmul and bias
     shift_back(out_internal, in_internal, {B, T, C}); // (B, T, C) is input shape of matmul operatnion
     ra1->backward(out_internal, out_internal);
-    mat1->backward(out_internal, in_internal);
+    mat1->backward2(out_internal, in_internal);
 
     // backward through first layernorm
     shift_back(out_internal, in_internal, {B, T, C}); // (B, T, C) is input shape of layernorm
@@ -260,6 +361,27 @@ void TransformerBlock::backward(Node* out, Node* in){
     delete out_internal;
     delete in_internal;
 
+}
+
+/**
+ * Destructor for the TransformerBlock class.
+ *
+ * Frees the memory allocated for the TransformerBlock object.
+ */
+TransformerBlock::~TransformerBlock(){
+    delete res2;
+    delete ra4; delete mat4;
+    delete gelu;
+    delete ra3; delete mat3;
+    delete ln2;
+    delete res1;
+    delete ra2; delete mat2;
+    delete att;
+    delete ra1; delete mat1;
+    delete ln1;
+
+    delete res1_node;
+    delete res2_node;
 }
 
 void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
@@ -283,19 +405,19 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
 
         for (size_t t = 0; t < T; t++){
 
-            for (size_t nh = 0 ; nh < num_heads; nh++){
+            for (size_t h = 0 ; h < num_heads; h++){
 
-                // get buffer1
-                float* pre_softmax = buffer + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
+                // get presoftmax buffer at b,t,h position
+                float* pre_softmax_bth = buffer + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*h;
 
                 // get query vector
-                float* q = in->act + b * T * 3*C + t * 3*C + nh * head_size;
+                float* q = in->act + b * T * 3*C + t * 3*C + h * head_size;
 
                 // get raw scores
                 float maxval = -9999999.0f;
                 for (size_t t2 = 0; t2 <= t; t2++){
                     // get key vector for t2 token
-                    float* k_t2 = in->act + b * T * 3*C + t2 * 3*C + C + nh * head_size;
+                    float* k_t2 = in->act + b * T * 3*C + t2 * 3*C + C + h * head_size;
 
                     // dot key vector with query vector to get score
                     float score = 0.0f;
@@ -309,29 +431,30 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
                         maxval = score;
                     }   
 
-                    pre_softmax[t2] = score;       
+                    pre_softmax_bth[t2] = score;       
 
                 }
 
-                float* post_softmax = buffer + half_buffer_size + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
+                // get post softmax buffer at b,t,h position
+                float* post_softmax_bth = buffer + half_buffer_size + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*h;
 
                 // normalize scores according to softmax
                 float exp_sum = 0;
                 for (size_t t2 = 0; t2 <= t; t2++){
-                    float exp_score = expf(pre_softmax[t2] - maxval);
-                    post_softmax[t2] = exp_score;
+                    float exp_score = expf(pre_softmax_bth[t2] - maxval);
+                    post_softmax_bth[t2] = exp_score;
                     exp_sum += exp_score;
                 }
 
                 float exp_sum_inv = exp_sum == 0 ? 0.0f : 1 / exp_sum;
 
                 for (size_t t2 = 0; t2 <= t; t2++){
-                    post_softmax[t2] *= exp_sum_inv;
+                    post_softmax_bth[t2] *= exp_sum_inv;
                 }
 
 
                 // get output vector
-                float* out_act = out->act + b * T * C + t * C + nh * head_size;
+                float* out_act = out->act + b * T * C + t * C + h * head_size;
                 // zero the output
                 for (size_t i = 0; i < head_size; i++){
                     out_act[i] = 0.0f;
@@ -340,10 +463,10 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
                 // accumulate weighted scores from tokens
                 for (size_t t2 = 0; t2 <= t; t2++){
                     // find value vector for t2 token
-                    float* v_t2 = in->act + b * T * 3*C + t2 * 3*C + C + C + nh * head_size;
+                    float* v_t2 = in->act + b * T * 3*C + t2 * 3*C + C + C + h * head_size;
 
                     for (size_t i=0; i < head_size; i++){
-                        out_act[i] += post_softmax[t2] * v_t2[i];
+                        out_act[i] += post_softmax_bth[t2] * v_t2[i];
                     }
                 }
     
@@ -644,6 +767,53 @@ void Matmul::forward(Node* out, Node* in) {
     }
 }
 
+/**
+ * Computes the forward pass of matrix multiplication assuming the weights are given tranposed.
+ *
+ * This method performs a matrix multiplication operation on the input node's
+ * activation values and the layer's parameters, storing the result in the output
+ * node's activation values. in has shape (B, T, C).  params has shape (OC, C). out has shape (B, T, OC).
+ *
+ * @param out The output node where the result of the matrix multiplication will be stored.
+ * @param in The input node containing the activation values to be multiplied.
+ *
+ * @throws std::invalid_argument If either the input or output node's activation values are nullptr.
+ */
+        
+void Matmul::forward2(Node* out, Node* in) {
+
+    if ((in->act == nullptr) || (out->act == nullptr)){
+        throw std::invalid_argument("in or out activations are nullptrs.");
+    }
+
+    size_t B = in->shape[0];
+    size_t T = in->shape[1];
+    size_t C = in->shape[2];
+    size_t OC = out->shape[2];
+    
+    float alpha = multiplier, beta = 0.0f;
+    float* B_ = params;
+
+    int M = T; // rows of A and C
+    int N = OC; // columns of trans(B) and C
+    int K = C; // columns of A and rows of B
+
+    int lda = C; // leading dimension of A
+    int ldb = C; // leading dimension of B
+    int ldc = OC; // leading dimension of C
+
+
+    for (size_t b = 0; b < B; b++){
+
+        float* A = in->act + b * T * C;
+        float* C_ = out->act + b * (T) * (OC);
+
+        cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
+                    M, N, K, alpha, A, lda, B_, ldb, beta, C_, ldc);
+
+    }
+}
+
 void Matmul::backward(Node* out, Node* in) {
     // Compute C <- alpha * op(A) * op(B) + beta*C
     // where op() can be the identity operation or the transpose operation.
@@ -667,6 +837,52 @@ void Matmul::backward(Node* out, Node* in) {
         // gradient wrt parameters
         cblas_sgemm(CblasRowMajor, CblasTrans, CblasNoTrans,
                     p, n, m, alpha, A, k, dLdC, n, beta, dLdB, n);
+
+    }
+}
+
+void Matmul::backward2(Node* out, Node* in) {
+    // Compute C <- alpha * op(A) * op(B) + beta*C
+    // where op() can be the identity operation or the transpose operation.
+    size_t B = in->shape[0];
+    size_t T = in->shape[1];
+    size_t C = in->shape[2];
+    size_t OC = out->shape[2];
+
+
+    float alpha = multiplier, beta = 1.0f;
+
+    int M, N, K, lda, ldb, ldc;
+
+    float* B_ = params;
+    float* dLdB = grad;
+
+
+    for (size_t b = 0; b < B; b++){
+
+        float* A = in->act + b * T * C;
+        float* dLdA = in->act_grads + b * T * C;
+        float* dLdC = out->act_grads + b * T * OC;
+
+        // gradient wrt input
+        M = T; // rows of dL/dC and dL/dA
+        N = C; // columns of B and dL/dA
+        K = OC; // columns of dL/dC and rows of B
+        lda = OC; // leading dimension of dL/dC
+        ldb = C; // leading dimension of B
+        ldc = C; // leading dimension of dL/dA
+        cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+                    M, N, K, alpha, dLdC, lda, B_, ldb, beta, dLdA, ldc);
+
+        // gradient wrt parameters
+        M = OC; // rows of dL/dC^T and dL/dB
+        N = C; // columns of A and dL/dB
+        K = T; // rows of dL/dC and A
+        lda = OC; // leading dimension of dL/dC
+        ldb = C; // leading dimension of A
+        ldc = C; // leading dimension of dL/dB
+        cblas_sgemm(CblasRowMajor, CblasTrans, CblasNoTrans,
+                    M, N, K, alpha, dLdC, lda, A, ldb, beta, dLdB, ldc);
 
     }
 }

@@ -1,7 +1,7 @@
 # Compiler (g++ or clang++ both work)
 CC = g++
 # Compiler flags
-CXXFLAGS = -std=c++17 -framework Accelerate -DACCELERATE_NEW_LAPACK #-Wall
+CXXFLAGS = -std=c++14 -framework Accelerate -DACCELERATE_NEW_LAPACK #-Wall
 # address sanitizer
 ADDRESS_SANITIZER = -fsanitize=address -fno-omit-frame-pointer
 
@@ -21,7 +21,7 @@ BIN_DIR = test/bin
 # Source files
 SOURCES = StaticGrad/src/classes.cpp test/src/test_common.cpp
 
-TESTS = att add layernorm matmul softmax encoder transformerblock gpt2 utils datastream tokenizer
+TESTS = att add layernorm matmul softmax encoder transformerblock gpt2 utils datastream tokenizer interface train
 
 
 .PHONY: all clean run $(TESTS)
@@ -60,6 +60,12 @@ datastream: test/src/datastream_test.cpp StaticGrad/src/datastream.cpp
 
 tokenizer: test/src/tokenizer_test.cpp StaticGrad/src/tokenizer.cpp
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/tokenizer_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
+
+interface: test/src/interface_test.cpp StaticGrad/src/interface.cpp StaticGrad/src/gpt2.cpp StaticGrad/src/datastream.cpp StaticGrad/src/tokenizer.cpp StaticGrad/src/utils.cpp $(SOURCES)
+	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/interface_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
+
+train: test/src/train_test.cpp StaticGrad/src/interface.cpp StaticGrad/src/gpt2.cpp StaticGrad/src/datastream.cpp StaticGrad/src/tokenizer.cpp StaticGrad/src/utils.cpp $(SOURCES)
+	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/train_test $^ $(INCLUDE_DIRS) $(LIBS) $(LIB_DIRS)
 
 
 clean:

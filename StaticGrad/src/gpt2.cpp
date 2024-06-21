@@ -1,53 +1,70 @@
 #include "../include/gpt2.hpp"
 
+ /**
+  * Constructor for the GPT2 class.
+  *
+  * @param C_ Input size for the embeddings
+  * @param L_ Number of layers in the transformer
+  * @param V_ Vocabulary size of the tokenizer
+  * @param maxT_ Maximum sequence length
+  * @param NH_ Number of heads in the self-attention layers 
+  * 
+  * @throws `std::runtime_error` if parameter allocation is done incorrectly
+  */
+GPT2::GPT2(size_t C_,
+           size_t L_,
+           size_t V_,
+           size_t maxT_,
+           size_t NH_):
+    C(C_),
+    L(L_),
+    V(V_),
+    maxT(maxT_),
+    NH(NH_),
+    beta1(0.9),
+    beta2(0.999),
+    alpha(0.0001){
+        num_params = gpt2_memrequirement(C, L, V, maxT);
 
-GPT2::GPT2(size_t C_, size_t L_, size_t V_, size_t maxT_, size_t NH_):
-            C(C_),
-            L(L_),
-            V(V_),
-            maxT(maxT_),
-            NH(NH_),
-            beta1(0.9),
-            beta2(0.999),
-            alpha(0.001){
-                num_params = gpt2_memrequirement(C, L, V, maxT);
+        params = new float[num_params];
+        grad = new float[num_params];
 
-                params = new float[num_params];
-                grad = new float[num_params];
+        m = new float[num_params](); // parentheses here initialize array to zero
+        v = new float[num_params]();
 
-                m = new float[num_params](); // parentheses here initialize array to zero
-                v = new float[num_params]();
+        float* p = params;
+        float* g = grad;
 
-                float* p = params;
-                float* g = grad;
-
-                encoder = new Encoder(p, g, C, V);
-                p += V*C + maxT*C;
-                g += V*C + maxT*C;
+        encoder = new Encoder(p, g, C, V);
+        p += V*C + maxT*C;
+        g += V*C + maxT*C;
 
 
-                for (int l = 0 ; l < L; l++){
-                    tblocks.push_back(new TransformerBlock(p, g, C, NH, maxT));
-                    p += (12*C*C + 13*C);
-                    g += (12*C*C + 13*C);
-                }
+        for (int l = 0 ; l < L; l++){
+            tblocks.push_back(new TransformerBlock(p, g, C, NH, maxT));
+            p += (12*C*C + 13*C);
+            g += (12*C*C + 13*C);
+        }
 
-                final_layernorm = new LayerNorm(p, g);
-                p += C + C;
-                g += C + C;
+        final_layernorm = new LayerNorm(p, g);
+        p += C + C;
+        g += C + C;
 
-                unembedding = new Matmul(params, grad);
+        unembedding = new Matmul(params, grad);
 
 
-                float temperature = 1.0f;
-                softmax = new Softmax(temperature);
+        float temperature = 1.0f;
+        softmax = new Softmax(temperature);
 
-                if (p - params != num_params || g - grad != num_params){
-                    throw std::runtime_error("parameter allocation incorrect");
-                }
+        if (p - params != num_params || g - grad != num_params){
+            throw std::runtime_error("parameter allocation incorrect");
+        }
 
 }
 
+/**
+ * @brief Destroy the GPT2 object. Deletes dynamically allocated memory for the model parameters, gradients, and submodules.
+ */
 GPT2::~GPT2(){
     delete softmax;
     delete unembedding;
@@ -59,18 +76,43 @@ GPT2::~GPT2(){
 
     delete encoder;
 
+    delete[] v;
+    delete[] m;
+    
     delete[] grad;
     delete[] params;
 }
 
+/**
+ * @brief Sets gradients of params to zero.
+ */
 void GPT2::zero_grad(){
     std::memset(grad, 0, num_params * sizeof(float));
 }
 
+/**
+ * @brief Set the temperature for the softmax layer.
+ *
+ * @param temp The temperature value to set.
+ */
 void GPT2::set_temperature(float temp){
     softmax->set_temperature(temp);
 }
 
+
+/**
+ * @brief Calculate the number of external activations required for a given batch size, sequence length, and model configuration.
+ *
+ * @param B Batch size.
+ * @param T Sequence length.
+ * @param C Number of attention heads.
+ * @param L Number of transformer blocks.
+ * @param V Size of the vocabulary.
+ * @return The number of activations.
+ * 
+ * @note This figure does not include the internal activations for the mean (B*T) and rstd (B*T) used by layernorms and the internal pre_softmax and post_softmax buffers used
+ * in an attention block.
+ */
 size_t gpt2_num_acts(size_t B, size_t T, size_t C, size_t L, size_t V){
     size_t num_acts = B*T;
 
@@ -92,6 +134,15 @@ size_t gpt2_num_acts(size_t B, size_t T, size_t C, size_t L, size_t V){
     return num_acts;
 };
 
+/**
+ * @brief Calculate the number of parameters for a given model configuration.
+ *
+ * @param C Number of attention heads.
+ * @param L Number of transformer blocks.
+ * @param vocab_size Size of the vocabulary.
+ * @param max_seqlen Maximum sequence length.
+ * @return The number of parameters in the model
+ */
 size_t gpt2_memrequirement(size_t C, size_t L, size_t vocab_size, size_t max_seqlen){
 
     size_t num_params = 0;
@@ -135,6 +186,12 @@ size_t gpt2_memrequirement(size_t C, size_t L, size_t vocab_size, size_t max_seq
 
 };
 
+/**
+ * @brief Update the parameters of the model using Adam
+ *
+ * @param t timestep, a.k.a. the exponent for beta1 and beta2 in the adam update.
+ * 
+ */
 void GPT2::update(int t){
     for (int i = 0; i < num_params; i++){
         float g_ = grad[i];
@@ -198,7 +255,7 @@ void GPT2::forward(Node* out, Node* in){
 
     // forward through unembedding (matmul)
     shift(out_internal, in_internal, {B, T, V});
-    unembedding->forward(out_internal, in_internal); // (B, T, C) - > (B, T, V)
+    unembedding->forward2(out_internal, in_internal); // (B, T, C) - > (B, T, V)
 
     // forward through softmax
     shift(out_internal, in_internal, {B, T, V});
@@ -235,12 +292,12 @@ void GPT2::backward(Node* out, Node* in){
 
     // backward through softmax takes forever, need to couple with cross entropy loss.
     // softmax->backward(out_internal, in_internal);
-    std::cerr << "WARN: Backward through softmax is not done here...ensure that cross_entropy_backward is called prior to this method to fill the gradients for this part of the backward pass.\n";
+    // std::cerr << "WARN: Backward through softmax is not done here...ensure that cross_entropy_backward is called prior to this method to fill the gradients for this part of the backward pass.\n";
 
 
     // backward through unembedding
     shift_back(out_internal, in_internal, {B, T, C});
-    unembedding->backward(out_internal, in_internal);
+    unembedding->backward2(out_internal, in_internal);
 
     // backward through layernorm
     shift_back(out_internal, in_internal, {B, T, C});

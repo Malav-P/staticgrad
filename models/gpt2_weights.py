@@ -18,6 +18,7 @@ def get_weights():
             assert(param_data.dtype == np.float32)
             total_params += param_data.size
             f.write(param_data.tobytes())
+            print(name, f" size = {param_data.size}")
 
     print('Total parameters written:', total_params)
     print('File size:', total_params * 4 / 1e9, ' GB')  # Assuming float32 data type, which is 4 bytes per parameter

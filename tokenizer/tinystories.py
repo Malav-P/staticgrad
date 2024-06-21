@@ -8,7 +8,7 @@ from tqdm import tqdm
 import json
 import concurrent.futures
 
-# The goal of this file is to download and tokenize the tinystories dataset into a raw bytestream of u32int_t integers. The bytestream is storage efficient
+# The goal of this file is to download and tokenize the tinystories dataset into a raw bytestream of u16int_t integers. The bytestream is storage efficient
 # and allows faster processing
 
 enc = tiktoken.get_encoding("gpt2")

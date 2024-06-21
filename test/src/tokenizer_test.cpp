@@ -7,13 +7,8 @@ class TokenizerTest : public ::testing::Test {
         std::string filename;
         void SetUp() override {
             filename = "/Users/malavpatel/Coding_Projects/StaticGrad/tokenizer/gpt2_vocab.bin";
-
         }
-
-        void TearDown() override {
-
-        }
-
+        void TearDown() override {}
 };
 
 
@@ -27,7 +22,7 @@ TEST_F(TokenizerTest, Decode) {
 
     Tokenizer tk = Tokenizer(filename);
 
-    int tokenIDs[2] = {0, 1};
+    u_int16_t tokenIDs[2] = {0, 1};
     int length = 2;
 
     std::string decoded = tk.decode(tokenIDs, length);
@@ -36,7 +31,7 @@ TEST_F(TokenizerTest, Decode) {
     EXPECT_TRUE(decoded == expected);
 
     // use std::vector container for tokens. this one is for "hello world"
-    std::vector<int> tokenids{31373, 995};
+    std::vector<u_int16_t> tokenids{31373, 995};
 
     decoded = tk.decode(tokenids);
     EXPECT_TRUE(decoded == "hello world");
@@ -46,7 +41,7 @@ TEST_F(TokenizerTest, Encode) {
     Tokenizer tk = Tokenizer(filename);
 
     std::string str = "hello world";
-    std::vector<int> tokenIDs = tk.encode(str);
+    std::vector<u_int16_t> tokenIDs = tk.encode(str);
 
     EXPECT_GT(tokenIDs.size(), 0);
 
@@ -64,12 +59,8 @@ TEST_F(TokenizerTest, EdgeCases) {
 
     Tokenizer tk = Tokenizer(filename);
 
-    int tokenIDs[1] = {-1};
+    u_int16_t* invalid_array = nullptr;
     int length = 1;
-    EXPECT_THROW(tk.decode(tokenIDs, length), std::out_of_range);
-
-    int* invalid_array = nullptr;
-    length = 1;
     EXPECT_THROW(tk.decode(invalid_array, length), std::invalid_argument);
 
 }
@@ -90,7 +81,7 @@ TEST_F(TokenizerTest, EncodeDecodeTest) {
     };
 
     for (const auto& str : testStrings) {
-        std::vector<int> encoded = tokenizer->encode(str);
+        std::vector<u_int16_t> encoded = tokenizer->encode(str);
         std::string decoded = tokenizer->decode(encoded);
         EXPECT_EQ(str, decoded);
     }

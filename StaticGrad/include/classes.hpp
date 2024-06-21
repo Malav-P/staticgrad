@@ -19,7 +19,8 @@ class Node {
         Node():
             act(nullptr),
             act_grads(nullptr),
-            shape({0}){}
+            shape({0}),
+            size(0){}
 
         ~Node(){}
 };
@@ -99,6 +100,9 @@ class Matmul : public Operation {
         
         void forward(Node* out, Node* in) override;
         void backward(Node* out, Node* in) override;
+
+        void forward2(Node* out, Node* in);
+        void backward2(Node* out, Node* in);
 
 };
 
@@ -185,88 +189,8 @@ class TransformerBlock : public Operation {
         RowAdd* ra4;
         Add* res2;
 
-        TransformerBlock(float* params_, float* grad_, size_t C, size_t NH, size_t maxT):
-            Operation(params_, grad_),
-            res1_node(nullptr),
-            res2_node(nullptr) {
-
-                if (C % NH != 0){
-                    throw std::invalid_argument("C must be divisible by NH");
-                }
-
-                res1_node = new Node();
-                res2_node = new Node();
-
-                float* layer_param = params_;
-                float* layer_grad = grad_;
-
-
-                ln1 = new LayerNorm(layer_param, layer_grad);
-                layer_param += C + C;
-                layer_grad += C + C;
-
-
-                mat1 = new Matmul(layer_param, layer_grad);
-                layer_param += C * 3*C;
-                layer_grad +=  C * 3*C;
-
-
-                ra1 = new RowAdd(layer_param, layer_grad);
-                layer_param += 3*C;
-                layer_grad += 3*C;
-
-                att = new Attention(NH, maxT);
-
-                mat2 = new Matmul(layer_param, layer_grad);
-                layer_param += C*C;
-                layer_grad +=  C*C;
-
-                ra2 = new RowAdd(layer_param, layer_grad);
-                layer_param += C;
-                layer_grad += C;
-
-                res1 = new Add();
-
-                ln2 = new LayerNorm(layer_param, layer_grad);
-                layer_param += C + C;
-                layer_grad += C + C;
-
-                mat3 = new Matmul(layer_param, layer_grad);
-                layer_param += C * 4*C;
-                layer_grad += C * 4*C;
-
-                ra3 = new RowAdd(layer_param, layer_grad);
-                layer_param += 4*C;
-                layer_grad += 4*C;
-
-                gelu = new GELU();
-
-                mat4 = new Matmul(layer_param, layer_grad);
-                layer_param += 4*C * C;
-                layer_grad += 4*C * C;
-
-                ra4 = new RowAdd(layer_param, layer_grad);
-                layer_param += C;
-                layer_grad += C;
-
-                res2 = new Add();
-            }
-
-        ~TransformerBlock(){
-            delete res2;
-            delete ra4; delete mat4;
-            delete gelu;
-            delete ra3; delete mat3;
-            delete ln2;
-            delete res1;
-            delete ra2; delete mat2;
-            delete att;
-            delete ra1; delete mat1;
-            delete ln1;
-
-            delete res1_node;
-            delete res2_node;
-        }
+        TransformerBlock(float* params_, float* grad_, size_t C, size_t NH, size_t maxT); // constructor
+        ~TransformerBlock(); // destructor
 
         
         void forward(Node* out, Node* in) override;

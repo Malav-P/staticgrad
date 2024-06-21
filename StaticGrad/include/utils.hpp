@@ -5,9 +5,9 @@
 #include <random>
 #include <fstream>
 
-void crossentropy_forward(Node* out, Node* in, int* targets);
+void crossentropy_forward(Node* out, Node* in, u_int16_t* targets);
 
-void crossentropy_softmax_backward(Node* out, Node* in, int* targets, float temperature);
+void crossentropy_softmax_backward(Node* out, Node* in, u_int16_t* targets, float temperature);
 
 int sample_token(float* probabilities, int length, bool random = false);
 

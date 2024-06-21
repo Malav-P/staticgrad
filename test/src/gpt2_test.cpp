@@ -33,10 +33,11 @@ TEST_F(GPT2Test, Constructor) {
     B = 4; // batch size
     T = 64; // sequence length
 
-    EXPECT_NO_THROW(GPT2* model = new GPT2(C, L, V, maxT, NH));
+    GPT2* model;
 
-    GPT2* model = new GPT2(C, L, V, maxT, NH);
+    EXPECT_NO_THROW(model = new GPT2(C, L, V, maxT, NH));
     EXPECT_EQ(model->tblocks.size(), L); // expect L transformer blocks
+
 }
 
 TEST_F(GPT2Test, DefaultConstructor) {

@@ -1,6 +1,17 @@
 #include "../include/utils.hpp"
 
-void crossentropy_forward(Node* out, Node* in, int* targets){ // (B, T, V) -> (B, T)
+/**
+ * Computes the cross-entropy loss for a given set of input probabilities and target labels.
+ *
+ * Args:
+ *   @param out: The output node where the computed loss will be stored, a 2D tensor of shape (B, T).
+ *   @param in: The input node containing the probabilities, a 3D tensor of shape (B, T, V).
+ *   @param targets: An array of shape (B, T) containing the true tokenID for each sample.
+ *
+ * Returns:
+ *   None. The computed loss is stored in the `act` array of the `out` node.
+ */
+void crossentropy_forward(Node* out, Node* in, u_int16_t* targets){ // (B, T, V) -> (B, T)
 
     size_t B = in->shape[0];
     size_t T = in->shape[1];
@@ -10,7 +21,7 @@ void crossentropy_forward(Node* out, Node* in, int* targets){ // (B, T, V) -> (B
     for (size_t b = 0; b < B; b++){
         for (size_t t = 0; t < T; t++){
             float* probabilities = in->act + b*T*V + t*V;
-            int target = targets[b*T + t];
+            u_int16_t target = targets[b*T + t];
 
             out->act[b*T + t] = -std::logf(probabilities[target]);
 
@@ -23,15 +34,15 @@ void crossentropy_forward(Node* out, Node* in, int* targets){ // (B, T, V) -> (B
  * to the softmax function.
  *
  * Args:
- *   out: The output of the softmax function, a 3D tensor of shape (B, T, V).
- *   in: The input to the softmax function, a 3D tensor of shape (B, T, V).
- *   targets: An array of shape (B, T) containing the true tokenID for each sample.
- *   temperature: the temperature parameter
+ *   @param out: The output of the softmax function, a 3D tensor of shape (B, T, V).
+ *   @param in: The input to the softmax function, a 3D tensor of shape (B, T, V).
+ *   @param targets: An array of shape (B, T) containing the true tokenID for each sample.
+ *   @param temperature: the temperature parameter
  *
  * Returns:
  *   None. The gradients are accumulated in the `act_grads` array of the `in` node.
  */
-void crossentropy_softmax_backward(Node* out, Node* in, int* targets, float temperature){
+void crossentropy_softmax_backward(Node* out, Node* in, u_int16_t* targets, float temperature){
     size_t B = in->shape[0];
     size_t T = in->shape[1];
     size_t V = in->shape[2];
@@ -39,7 +50,7 @@ void crossentropy_softmax_backward(Node* out, Node* in, int* targets, float temp
     for (size_t b = 0; b < B; b++){
         for (size_t t = 0; t < T; t++){
             float* probabilities = out->act + b*T*V + t*V;
-            int target = targets[b*T + t];
+            u_int16_t target = targets[b*T + t];
 
             for (size_t v = 0; v < V; v++){
                 float indicator = (v == target) ? 1.0f : 0.0f;
@@ -54,6 +65,20 @@ void crossentropy_softmax_backward(Node* out, Node* in, int* targets, float temp
     }
 }
 
+/**
+ * Samples a token from a given probability distribution.
+ *
+ * Args:
+ *   @param probabilities: A pointer to the probability distribution, an array of length `length`.
+ *   @param length: The number of elements in the probability distribution.
+ *   @param random: A boolean flag indicating whether to sample randomly or deterministically.
+ *
+ * Returns:
+ *   The index of the sampled token.
+ *
+ * Throws:
+ *   std::invalid_argument if the probabilities are not valid (i.e., non-negative and summing up to 1).
+ */
 int sample_token(float* probabilities, int length, bool random){
 
     // Check if probabilities are valid
@@ -69,21 +94,39 @@ int sample_token(float* probabilities, int length, bool random){
         throw std::invalid_argument("Probabilities must sum up to 1");
     }
 
+    int token;
+
     if (random){
         static std::random_device rd;
         static std::mt19937 gen(rd());
 
         std::discrete_distribution<> d(probabilities, probabilities + length);
-        return d(gen);
+        token = d(gen);
     }
 
     else {
-        return std::distance(probabilities, std::max_element(probabilities, probabilities + length));
+        token = std::distance(probabilities, std::max_element(probabilities, probabilities + length));
 
     }
+
+    return token;
     
 }
 
+/**
+ * Loads weights from a file into a given buffer.
+ *
+ * Args:
+ *   @param dest: A pointer to the buffer where the weights will be stored.
+ *   @param fname: The name of the file containing the weights.
+ *   @param expected_bytes: The expected number of bytes in the file, or -1 if unknown.
+ *
+ * Returns:
+ *   None.
+ *
+ * Throws:
+ *   std::runtime_error if the file cannot be opened, the number of bytes in the file does not match the expected number, or an error occurs while reading the file.
+ */
 void load_weights(float* dest, const std::string& fname, int expected_bytes){
 
     // Open the file in binary mode

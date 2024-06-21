@@ -5,34 +5,31 @@
 
 class MatmulTest : public ::testing::Test {
   protected:
-  void SetUp() override {
-        B = 2;
-        T = 3;
-        C = 4;
-        p = C;
-        n = 5;
-        multiplier = 1.0;
 
-        in = new Node();
-        in->act = new float[B * T * C];
-        in->act_grads = new float[B * T * C]; 
-        in->shape = {B, T, C};
-        in->size = B * T * C;
+  void initialize(size_t B, size_t T, size_t C, size_t OC){
+      in = new Node();
+      in->act = new float[B * T * C];
+      in->act_grads = new float[B * T * C]; 
+      in->shape = {B, T, C};
+      in->size = B * T * C;
 
-        out = new Node();
-        out->act = new float[B * T * n];
-        out->act_grads = new float[B * T * n]; out->shape = {B, T, n};
-        out->size = B * T * n;    
+      out = new Node();
+      out->act = new float[B * T * OC];
+      out->act_grads = new float[B * T * OC]; out->shape = {B, T, OC};
+      out->size = B * T * OC;
 
-        // param and grad for matmul      
-        params = new float[p * n];
-        grad = new float[p * n];
+      params = new float[OC*C];
+      grad = new float[OC*C];
 
-        // Initialize params array with random values
-        fillArrayWithRandom(params, p * n);
+      fillArrayWithRandom(params, C * OC);
+
+
   }
 
-  void TearDown() override {
+  void SetUp() override {}
+  void TearDown() override {}
+
+  void teardown() {
         delete[] in->act;    
         delete[] in->act_grads;
         delete in;        
@@ -43,12 +40,6 @@ class MatmulTest : public ::testing::Test {
         delete[] grad;
   } 
 
-  size_t B;
-  size_t T;
-  size_t C;
-  size_t p;
-  size_t n;
-  float multiplier;
   Node* in; 
   Node* out;  
   float* params;
@@ -56,6 +47,13 @@ class MatmulTest : public ::testing::Test {
 };
 
 TEST_F(MatmulTest, Forward) {
+   size_t B = 2;
+   size_t T = 3;
+   size_t C = 4;
+   size_t OC = 5;
+
+   initialize(B, T, C, OC);
+
    Matmul* matmul = new Matmul(params, nullptr);
 
    // Fill input and output arrays with random values
@@ -65,12 +63,12 @@ TEST_F(MatmulTest, Forward) {
    matmul->forward(out, in);
 
    // Calculate the expected output using cblas_sgemm
-   float* expected_out = new float[B * T * n];
+   float* expected_out = new float[B * T * OC];
    for (size_t b = 0; b < B; b++){
         float* A = in->act + b * T * C;
-        float* out_ = expected_out + b * T * n;
+        float* out_ = expected_out + b * T * OC;
 
-        cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, T, n, C, multiplier, A, C, params, n, 0.0f, out_, n);
+        cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, T, OC, C, 1.0f, A, C, params, OC, 0.0f, out_, OC);
    }
 
    for (int i = 0; i < out->size; i++) {
@@ -79,14 +77,65 @@ TEST_F(MatmulTest, Forward) {
 
    delete[] expected_out;
    delete matmul;
+
+   teardown();
 }  
 
+TEST_F(MatmulTest, Forward2) {
+   size_t B = 1;
+   size_t T = 2;
+   size_t C = 3;
+   size_t OC = 4;
+
+   initialize(B, T, C, OC);
+
+   Matmul* matmul = new Matmul(params, grad);
+
+
+   // input is (1, 2, 3) tensor. [1, 2, 3
+   //                             4, 5, 6]
+   for (int i = 0; i < B*T*C; i++){
+      in->act[i] = i+1;
+   }
+
+   // params is (4, 3) matrix. [7, 8, 9
+   //                           10, 11, 12
+   //                           13, 14, 15
+   //                           16, 17, 18]
+   for (int i = 0; i < OC*C; i++){
+      params[i] = 7+i;
+   }
+
+   
+   // expected it (2, 4) matrix. [50, 68, 86, 104
+   //                             122, 167, 212, 257]
+   float expected[8] = {50.0f, 68.0f, 86.0f, 104.0f, 122.0f, 167.0f, 212.0f, 257.0f};
+
+   matmul->forward2(out, in);
+
+   for (int i = 0; i < T*OC; i++){
+      EXPECT_FLOAT_EQ(out->act[i], expected[i]);
+   }
+
+   delete matmul;
+   teardown();
+
+} 
+
 TEST_F(MatmulTest, Backward) {
+
+   size_t B = 2;
+   size_t T = 3;
+   size_t C = 4;
+   size_t OC = 5;
+
+   initialize(B, T, C, OC);
+
 	Matmul* matmul = new Matmul(params, grad);
 
 	// Fill data
 	std::memset(in->act_grads, 0, in->size * sizeof(float));
-	std::memset(matmul->grad, 0, p*n * sizeof(float));
+	std::memset(matmul->grad, 0, C*OC * sizeof(float));
 	fillArrayWithOnes(out->act_grads, out->size);
 	fillArrayWithRandom(in->act, in->size);
 
@@ -98,8 +147,8 @@ TEST_F(MatmulTest, Backward) {
 			for (int c = 0; c < C; c++){
 
 				float expected = 0.0f;
-				for (int i = 0; i < n; i++){
-					expected += matmul->params[ c*n + i];
+				for (int i = 0; i < OC; i++){
+					expected += matmul->params[ c*OC + i];
 				}
 				EXPECT_FLOAT_EQ(in->act_grads[b*T*C + t*C + c], expected);
 
@@ -109,7 +158,7 @@ TEST_F(MatmulTest, Backward) {
 	}
 
 	// check gradient wrt param
-	for (int i = 0; i < p; i++){
+	for (int i = 0; i < C; i++){
 
 		float expected = 0.0f;
 		for (int b = 0; b < B; b++){
@@ -121,17 +170,82 @@ TEST_F(MatmulTest, Backward) {
 			
 		}
 
-		for (int j = 0 ; j < n; j++){
-			EXPECT_FLOAT_EQ(matmul->grad[i*n + j], expected);
+		for (int j = 0 ; j < OC; j++){
+			EXPECT_FLOAT_EQ(matmul->grad[i*OC + j], expected);
 		}
 
 	}
 
 
 	delete matmul;
+   teardown();
+}
+
+TEST_F(MatmulTest, Backward2) {
+   size_t B = 2;
+   size_t T = 3;
+   size_t C = 4;
+   size_t OC = 5;
+
+   initialize(B, T, C, OC);
+
+	Matmul* matmul = new Matmul(params, grad);
+
+	// Fill data
+	std::memset(in->act_grads, 0, in->size * sizeof(float));
+	std::memset(matmul->grad, 0, C*OC * sizeof(float));
+	fillArrayWithOnes(out->act_grads, out->size);
+	fillArrayWithRandom(in->act, in->size);
+
+	matmul->backward2(out, in);
+
+	// check gradient wrt input
+	for (int b = 0; b < B; b++){
+		for (int t = 0;  t < T; t++){
+			for (int c = 0; c < C; c++){
+
+				float expected = 0.0f;
+				for (int i = 0; i < OC; i++){
+					expected += matmul->params[ c + i*C];
+				}
+				EXPECT_FLOAT_EQ(in->act_grads[b*T*C + t*C + c], expected);
+
+			}
+
+		}
+	}
+
+	// check gradient wrt param
+	for (int i = 0; i < C; i++){
+
+		float expected = 0.0f;
+		for (int b = 0; b < B; b++){
+			float* A = in->act + b*T*C + i;
+			
+			for (int t = 0; t < T; t++){
+				expected += A[t*C];
+			}
+			
+		}
+
+		for (int j = 0 ; j < OC; j++){
+			EXPECT_FLOAT_EQ(matmul->grad[j*C + i], expected);
+		}
+
+	}
+
+
+	delete matmul;
+   teardown();
 }
 
 TEST_F(MatmulTest, InputNull) {
+   size_t B = 2;
+   size_t T = 3;
+   size_t C = 4;
+   size_t OC = 5;
+
+   initialize(B, T, C, OC);
    Matmul* matmul = new Matmul(params, nullptr);
 
    delete[] in->act;
@@ -139,9 +253,16 @@ TEST_F(MatmulTest, InputNull) {
    EXPECT_THROW(matmul->forward(out, in), std::invalid_argument);
 
    delete matmul;
+   teardown();
 } 
 
 TEST_F(MatmulTest, OutputNull) {
+   size_t B = 2;
+   size_t T = 3;
+   size_t C = 4;
+   size_t OC = 5;
+
+   initialize(B, T, C, OC);
    Matmul* matmul = new Matmul(params, nullptr);
 
    delete[] out->act;
@@ -149,6 +270,7 @@ TEST_F(MatmulTest, OutputNull) {
    EXPECT_THROW(matmul->forward(out, in), std::invalid_argument);
 
    delete matmul;
+   teardown();
 }
 
 int main(int argc, char **argv) {

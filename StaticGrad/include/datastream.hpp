@@ -5,6 +5,8 @@
 #include <fstream>
 #include <iostream>
 
+#include "./classes.hpp"
+
 class DataStream {
     public:
 
@@ -24,8 +26,10 @@ class DataStream {
         void close();
 
         void load_buffer();
+        void buffer_to_Node(Node* node, int num_tokens);
 
         ~DataStream(){
+            close();
             delete stream;
             delete[] buffer;
         }

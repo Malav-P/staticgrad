@@ -58,11 +58,11 @@ TEST_F(EncoderTest, Forward) {
 	encoder->forward(out, in);
 
 	for (int i = 0; i < in->size; i++){
-        float* token_embed = encoder->params + i;
+        float* token_embed = encoder->params + i*C;
         float* pos_embed = encoder->params + C * encoder->vocab_size + i%T * C;
         float* out_bt = out->act + i*C;
         for (int j = 0; j < C; j++){
-            EXPECT_FLOAT_EQ(token_embed[j*vocab_size] + pos_embed[j], out_bt[j]);
+            EXPECT_FLOAT_EQ(token_embed[j] + pos_embed[j], out_bt[j]);
         }
 	}
 
@@ -102,17 +102,15 @@ TEST_F(EncoderTest, Backward) {
 				float* output_g = out->act_grads + b*T*C + t*C;
 				deriv += output_g[i];
 
-				float* token_embed_g = wte_g + b*T + t;
-            	EXPECT_FLOAT_EQ(token_embed_g[i*vocab_size], output_g[i]);
+				int tokenID = lrint(in->act[b*T + t]);
+				float* token_embed_g = wte_g + tokenID*C;
+            	EXPECT_FLOAT_EQ(token_embed_g[i], output_g[i]);
 
 			}
 			EXPECT_FLOAT_EQ(pos_embed_g[i], deriv);
 		}
     
 	}
-	
-	
-
 	delete encoder;
     delete[] grad_;
 }
