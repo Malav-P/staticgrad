@@ -1,4 +1,4 @@
-#include "../include/utils.hpp"
+#include "utils.hpp"
 
 /**
  * Computes the cross-entropy loss for a given set of input probabilities and target labels.

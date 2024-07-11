@@ -1,4 +1,4 @@
-#include "../include/gpt2.hpp"
+#include "gpt2.hpp"
 
  /**
   * Constructor for the GPT2 class.
@@ -208,6 +208,24 @@ void GPT2::update(int t){
     }
 }
 
+/**
+ * @brief Performs the forward pass of the GPT-2 model.
+ *
+ * This function transforms the input sequence tensor of shape (B, T) to an output tensor 
+ * of shape (B, T, V), where B is the batch size, T is the sequence length, and V is the 
+ * vocabulary size. The forward pass involves the following major components:
+ * 1. Encoder: A multi-layer perceptron that converts the input sequences to a dense representation.
+ * 2. Transformer Blocks: A sequence of self-attention and feed-forward neural networks that process the encoded input.
+ * 3. Layer Normalization: Applies layer normalization to the output of the last transformer block.
+ * 4. Unembedding: Maps the transformed representation to vocabulary probabilities using a linear layer.
+ * 5. Softmax: Computes the softmax probabilities over the vocabulary.
+ * 
+ * @param out   The output Node, containing the probabilities over vocabulary for each input sequence.
+ *              Shape: (B, T, V), where B is the batch size, T is the sequence length, and V is the vocabulary size.
+ * @param in    The input Node, containing the token indices of the input sequences. Shape: (B, T).
+ *
+ * @throws std::runtime_error if the memory allocation for activations is not managed properly.
+ */
 void GPT2::forward(Node* out, Node* in){
     // in is shape (B, T)
     // out is shape (B, T, V)
@@ -241,7 +259,7 @@ void GPT2::forward(Node* out, Node* in){
         in_internal->size = out_internal->size;
 
         out_internal->act += 16 * B*T*C; // 16*B*T*C is the number of activations used in a tblock
-        out_internal->act_grads += 16*B*T*C;
+        out_internal->act_grads += 16 * B*T*C;
         out_internal->shape = {B, T, C};
         out_internal->size = B*T*C;
 

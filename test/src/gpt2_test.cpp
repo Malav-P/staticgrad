@@ -59,6 +59,7 @@ TEST_F(GPT2Test, DefaultConstructor) {
     EXPECT_EQ(model->NH, NH);
 }
 
+
 TEST_F(GPT2Test, Forward) {
     C = 768; // embedding dimension
     L = 12; // number of transformer blocks

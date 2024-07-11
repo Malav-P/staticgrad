@@ -1,9 +1,12 @@
 #ifndef INTERFACE_HPP
 #define INTERFACE_HPP
 
-#include "./datastream.hpp"
-#include "./tokenizer.hpp"
-#include "./gpt2.hpp"
+#include <cstddef>
+
+class GPT2;
+class DataStream;
+class Tokenizer;
+class Node;
 
 void setup(GPT2*& model,
            DataStream*& datastream,

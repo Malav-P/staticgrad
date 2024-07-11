@@ -123,7 +123,7 @@ TEST_F(MatmulTest, Forward2) {
 } 
 
 TEST_F(MatmulTest, Backward) {
-
+ 
    size_t B = 2;
    size_t T = 3;
    size_t C = 4;

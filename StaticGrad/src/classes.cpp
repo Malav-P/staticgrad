@@ -1,6 +1,18 @@
-#include "../include/classes.hpp"
+#include "classes.hpp"
 #include <cmath>
 
+
+/**
+ * Shifts the pointer location for in and out activations/grad in order to process the next layer in gpt. Used for the forward pass
+ *
+ * Args:
+ *   @param out: The output node where the next layer's output will be written to
+ *   @param in: The input node containing the input activations for the next layer
+ *   @param shape_: The shape of the next layer's output
+ *
+ * @note
+ *   - Returns nothing. The pointers are shifted accordingly.
+ */
 void shift(Node* out, Node* in, std::vector<size_t> shape_){
 
     in->act = out->act;
@@ -23,6 +35,17 @@ void shift(Node* out, Node* in, std::vector<size_t> shape_){
 
 }
 
+/**
+ * Shifts the pointer location for in and out activations/grad in order to process the previous layer in gpt (used for the backward pass)
+ *
+ * Args:
+ *   @param out: The output node where the next layer's output will be written to
+ *   @param in: The input node containing the input activations for the next layer
+ *   @param shape_: The shape of the previous layer's input
+ *
+ * @note
+ *   - Returns nothing. The pointers are shifted accordingly.
+ */
 void shift_back(Node* out, Node* in, std::vector<size_t> shape_){
 
     out->act = in->act;
@@ -44,6 +67,21 @@ void shift_back(Node* out, Node* in, std::vector<size_t> shape_){
 
 }
 
+/**
+ * @brief Encodes the input sequence and outputs the encoded representation.
+ *
+ * @param[out] out The output node containing the encoded representation.
+ * @param[in] in The input node containing the sequence to be encoded.
+ *
+ * @note The input node's shape should be [B, T], where B is the batch size and T is the sequence length.
+ * The output node's shape will be [B, T, C], where C is the embedding size.
+ *
+ * @note
+ * This function applies the embedding lookup for both tokens and positions and then sums them up to get the final encoded representation.
+ * The token embeddings are stored in the 'params' array, with the first C * vocab_size elements representing the token embeddings.
+ * The position embeddings are stored in the rest of the 'params' array, with the next C * maxT elements representing the position embeddings.
+ * The encoded representation is stored in the 'act' array of the output node.
+ */
 void Encoder::forward(Node* out, Node* in){
 
     size_t B = in->shape[0];
@@ -73,6 +111,22 @@ void Encoder::forward(Node* out, Node* in){
     }
 }
 
+/**
+ * @brief Performs the backward pass through the encoder layer.
+ *
+ * This function updates the gradient of token embeddings (wte) and positional embeddings (wpe) based on the gradients of the output (@p out).
+ *
+ * @param out The output tensor of shape (B, T, C). B is the batch size, T is the sequence length, and C is the hidden channel size.
+ * @param in The input tensor of shape (B, T). Each element in the input tensor corresponds to an integer representing the token ID.
+ *
+ * @note 
+ * - The function assumes that the gradient buffer (grad) of the Encoder class is properly allocated and has enough space to accommodate the gradients of wte and wpe.
+ * The gradients of wte are stored in the first part of the grad buffer, and the gradients of wpe are stored in the second part, following the layout: [wte_gradients, wpe_gradients].
+ * 
+ * @note
+ * - The input `in` is expected to contain token indices (floating-point values) that are
+ *       subsequently cast to `long int` to access the corresponding embeddings.
+ */
 void Encoder::backward(Node* out, Node* in){
 
     // out is (B, T, C)
@@ -110,17 +164,21 @@ void Encoder::backward(Node* out, Node* in){
 }
 
 /**
- * Constructor for the TransformerBlock class.
+ * @brief Constructor for the TransformerBlock class.
  *
- * Args:
- *   params_: The parameters for the transformer block.
- *   grad_: The gradients for the transformer block.
- *   C: The number of channels.
- *   NH: The number of heads.
- *   maxT: The maximum sequence length.
+ * This constructor initializes a Transformer block layer.
+ * It comprises multiple layers such as LayerNorm, Multi-Head Self-Attention, Feed-Forward Neural Network (FFN), and residual connections.
  *
- * Throws:
- *   std::invalid_argument if C is not divisible by NH.
+ * @param params_ Pointer to the parameters of the Transformer block. The parameters should be organized in a specific order as mentioned in the code.
+ * @param grad_   Pointer to the gradients of the Transformer block. The gradients should be organized in the same order as the parameters.
+ * @param C       The number of channels or embedding dimension in the input data.
+ * @param NH      The number of heads for the multi-head self-attention. This parameter determines the parallelism of the self-attention mechanism.
+ * @param maxT    The maximum sequence length. This is important for allocating sufficient memory and handling variable-length sequences.
+ *
+ * @throw std::invalid_argument If @p C is not divisible by @p NH. This is a fundamental requirement of the Transformer architecture.
+ * 
+ * @note 
+ * - The constructor dynamically allocates memory for various internal nodes and layers. Hence, it is crucial to handle exceptions during construction.
  */
 TransformerBlock::TransformerBlock(float* params_, float* grad_, size_t C, size_t NH, size_t maxT):
     Operation(params_, grad_),
@@ -190,14 +248,13 @@ TransformerBlock::TransformerBlock(float* params_, float* grad_, size_t C, size_
 }
 
 /**
- * Performs a forward pass through the transformer block.
+ * @brief Performs a forward pass through the transformer block.
  *
- * Args:
- *   out: The output node.
- *   in: The input node.
+ * @param[out] out  The output node.
+ * @param[in]  in   The input node with shape `(B, T, C)`.
  *
- * Throws:
- *   std::runtime_error if the output node and internal output node are not equal. This indicates that activations were not written correctly.
+ * @throw std::runtime_error if the output node and the internal output node do not match.
+ * This indicates an incorrect implementation of activation storage.
  */
 void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
     size_t B = in->shape[0];
@@ -282,14 +339,13 @@ void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
 }
 
 /**
- * Performs a backward pass through the transformer block.
+ * @brief Performs a backward pass through the transformer block.
  *
- * Args:
- *   out: The output node.
- *   in: The input node.
+ * @param[out] out  The output node.
+ * @param[in]  in   The input node with shape `(B, T, C)`.
  *
- * Throws:
- *   std::runtime_error if the input node and internal input node are not equal.
+ * @throw std::runtime_error if the input node and the internal input node do not match.
+ * This indicates an incorrect implementation of activation storage.
  */
 void TransformerBlock::backward(Node* out, Node* in){
 
@@ -364,9 +420,8 @@ void TransformerBlock::backward(Node* out, Node* in){
 }
 
 /**
- * Destructor for the TransformerBlock class.
+ * @brief Destructor for transformer block. Frees resources associated with block.
  *
- * Frees the memory allocated for the TransformerBlock object.
  */
 TransformerBlock::~TransformerBlock(){
     delete res2;
@@ -384,6 +439,17 @@ TransformerBlock::~TransformerBlock(){
     delete res2_node;
 }
 
+/**
+ * @brief Performs a forward pass through the attention block.
+ *
+ * @param[out] out  The output node.
+ * @param[in]  in   The input node with shape `(B, T, C)`.
+ *
+ * @note 
+ * - memory for an internal buffer is allocated to cache the values of the query-key dot products and the softmax operation on that cache.
+ * @note 
+ * - any resources stored in the buffer are freed before the above allocation is done.
+ */
 void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
 
     if (in->size != 3 * out->size){
@@ -469,14 +535,24 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
                         out_act[i] += post_softmax_bth[t2] * v_t2[i];
                     }
                 }
-    
             }
-
         }
     }
-
 }
 
+/**
+ * @brief Performs a backward pass through the attention block.
+ *
+ * @param[out] out  The output node.
+ * @param[in]  in   The input node with shape `(B, T, C)`.
+ *
+ * @note 
+ * - memory for an internal buffer is allocated to cache the values of the gradients for query-key dot products and the gradients of softmax operation on that cache.
+ * @note 
+ * - any resources stored in the buffer are freed before the above allocation is done.
+ * 
+ * @throw `std::runtime_error` if `buffer` from forward pass has not been allocated (and thus written to).
+ */
 void Attention::backward(Node* out, Node* in) {
     // Get the batch size, sequence length, and number of channels
     size_t B = in->shape[0];
@@ -563,6 +639,7 @@ void Attention::backward(Node* out, Node* in) {
 
 
 }
+
 /**
  * Forward pass of the GELU (Gaussian Error Linear Unit) activation function.
  *
@@ -578,7 +655,6 @@ void Attention::backward(Node* out, Node* in) {
  * @param out Pointer to the output node.
  * @param in Pointer to the input node.
  */
-
 void GELU::forward(Node* out, Node* in) {
     size_t numel = in->size;
 
@@ -590,6 +666,16 @@ void GELU::forward(Node* out, Node* in) {
     }
 }
 
+/**
+ * Backward pass of the GELU (Gaussian Error Linear Unit) activation function.
+ *
+ * This function applies the gradient of GELU activation function to each element.
+ *
+ * @see `GELU::forward` for details of GELU
+ * 
+ * @param out Pointer to the output node.
+ * @param in Pointer to the input node.
+ */
 void GELU::backward(Node* out, Node* in) {
     size_t numel = in->size;
 

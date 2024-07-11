@@ -115,8 +115,6 @@ TEST_F(EncoderTest, Backward) {
     delete[] grad_;
 }
 
-
-
 // Main function to run the tests
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);

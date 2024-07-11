@@ -1,4 +1,4 @@
-#include "../include/datastream.hpp"
+#include "datastream.hpp"
 
 void DataStream::init_buffer(int num_tokens){
 

@@ -1,4 +1,4 @@
-#include "../include/tokenizer.hpp"
+#include "tokenizer.hpp"
 
  /**
   * Constructs a `Tokenizer` object from a binary file.

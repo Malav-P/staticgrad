@@ -1,5 +1,8 @@
-#include "../include/interface.hpp"
-#include "./utils.hpp"
+#include "datastream.hpp"
+#include "tokenizer.hpp"
+#include "gpt2.hpp"
+#include "interface.hpp"
+#include "utils.hpp"
 
 
 /**
