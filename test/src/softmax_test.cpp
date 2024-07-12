@@ -43,7 +43,7 @@ TEST_F(SoftmaxTest, RandomInput) {
 	softmax->forward(out, in);
 
 	// Check that output values are probabilities (i.e., in range [0, 1])
-	for (int i = 0; i < out->size; i++){
+	for (size_t i = 0; i < out->size; i++){
 		EXPECT_GE(out->act[i], 0.0f);
 		EXPECT_LE(out->act[i], 1.0f);
 	}
@@ -66,14 +66,14 @@ TEST_F(SoftmaxTest, LargeNegativeActivation) {
 	Softmax* softmax = new Softmax(1.0f);
 
 	// Initialize input data such that the sum of all exponentials is zero
-	for (int i = 0; i < in->size; i++){
+	for (size_t i = 0; i < in->size; i++){
 		in->act[i] = -1000.0f;  // a large negative value will result in exp(x) being close to zero
 	}
 
 	softmax->forward(out, in);
 
 	// Check that output values are all the same
-	for (int i = 0; i < out->size; i++){
+	for (size_t i = 0; i < out->size; i++){
 		EXPECT_NEAR(out->act[i], 1.0f / V, 1e-6);
 	}
 
@@ -117,7 +117,7 @@ TEST_F(SoftmaxTest, BackwardPassRandom) {
 	float arr[] = {0.2f, 0.3f, 0.4f, 0.1f};
 
 	// Initialize out data 
-	for (int i = 0; i < out->size; i++){
+	for (size_t i = 0; i < out->size; i++){
 		out->act[i] = arr[i%4]; 
 		out->act_grads[i] = 1.0f;
 		in->act_grads[i] = 0.0f;
@@ -131,9 +131,9 @@ TEST_F(SoftmaxTest, BackwardPassRandom) {
 				   0.2f * (-0.4f), 0.3f * (-0.4f), 0.4f * (1.f - 0.4f), 0.1f * (-0.4f),
 				   0.2f * (-0.1f), 0.3f * (-0.1f), 0.4f * (-0.1f), 0.1f * (1.f - 0.1f)};
 
-	for (int i = 0; i < out->size; i++){
+	for (size_t i = 0; i < out->size; i++){
 		float expected = 0.0f;
-		for (int j = 0; j < out->size; j++){
+		for (size_t j = 0; j < out->size; j++){
 			expected += jac[4*(i%4) + (j%4)];
 		}
 		EXPECT_NEAR(in->act_grads[i], expected, 1e-6);

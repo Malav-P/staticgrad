@@ -59,16 +59,16 @@ class AttentionTest : public ::testing::Test {
 
 TEST_F(AttentionTest, Forward) {
 	size_t num_heads = 12;
-	Attention* att = new Attention(num_heads, maxT);
+	Attention* att = new Attention(num_heads);
 
 	int half_buffer_size = num_heads*B*lrint(T*(T+1)/2);
-	int head_size = C / att->num_heads;
+	size_t head_size = C / att->num_heads;
 
 
 	// fill query, key, value
-	for (int b = 0; b < B; b++){
-		for (int t = 0; t < T; t++){
-			for (int i = 0; i < C; i++){
+	for (size_t b = 0; b < B; b++){
+		for (size_t t = 0; t < T; t++){
+			for (size_t i = 0; i < C; i++){
 				// fill query
 				in->act[b*T*3*C + t*3*C + i] = 1.0f / C * (i+1);
 
@@ -86,15 +86,15 @@ TEST_F(AttentionTest, Forward) {
 	float* tracker = att->buffer + half_buffer_size;
 	float* start = tracker;
 
-	for (int b = 0; b < B; b++){
-		for (int t = 0; t < T; t++){
-			for (int nh = 0; nh < att->num_heads; nh++){
+	for (size_t b = 0; b < B; b++){
+		for (size_t t = 0; t < T; t++){
+			for (size_t nh = 0; nh < att->num_heads; nh++){
 
 				float* buffer2 = att->buffer + half_buffer_size + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*nh;
 				tracker += (t + 1);
 
 				float sum = 0.0f;
-				for (int t2 = 0; t2 <= t; t2++){
+				for (size_t t2 = 0; t2 <= t; t2++){
 					sum += buffer2[t2];
 				}
 
@@ -139,9 +139,8 @@ TEST_F(AttentionTest, Backward){
 	// ----- to fill buffers
 
 	size_t num_heads = 12;
-	Attention* att = new Attention(num_heads, maxT);
+	Attention* att = new Attention(num_heads);
 
-	int half_buffer_size = num_heads*B*lrint(T*(T+1)/2);
 	int head_size = C / att->num_heads;
 
 	fillArrayWithRandom(in->act, in->size);
@@ -157,7 +156,7 @@ TEST_F(AttentionTest, Backward){
 	fillArrayWithOnes(out->act_grads, out->size);
 	std::memset(in->act_grads, 0, in->size * sizeof(float));
 
-	for (int i = 0 ; i < in->size; i++){
+	for (size_t i = 0 ; i < in->size; i++){
 		EXPECT_FLOAT_EQ(in->act_grads[i], 0.0f);
 	}
 
@@ -188,7 +187,7 @@ TEST_F(AttentionTest, Backward){
 TEST_F(AttentionTest, Backward2){
    // Set up the attention mechanism with 1 head and a sequence length of 3
     size_t num_heads = 1;
-    Attention* att = new Attention(num_heads, T);
+    Attention* att = new Attention(num_heads);
 
 	B = 1;
 	T = 3;
@@ -200,8 +199,8 @@ TEST_F(AttentionTest, Backward2){
     // Query vector: [1, 2, 3], [4, 5, 6], [7, 8, 9]
     // Key vector: [10, 11, 12], [13, 14, 15], [16, 17, 18]
     // Value vector: [19, 20, 21], [22, 23, 24], [25, 26, 27]
-    for (int t = 0; t < T; t++) {
-        for (int i = 0; i < 3; i++) {
+    for (size_t t = 0; t < T; t++) {
+        for (size_t i = 0; i < 3; i++) {
             in->act[t * 9 + i] = t * 3 + i + 1; // query
             in->act[t * 9 + 3 + i] = t * 3 + i + 10; // key
             in->act[t * 9 + 6 + i] = t * 3 + i + 19; // value
@@ -212,7 +211,7 @@ TEST_F(AttentionTest, Backward2){
     att->forward(out, in);
 
     // Fill the output gradients with ones
-    for (int i = 0; i < out->size; i++) {
+    for (size_t i = 0; i < out->size; i++) {
         out->act_grads[i] = 1.0f;
     }
 
@@ -222,22 +221,21 @@ TEST_F(AttentionTest, Backward2){
     // Check the gradients of the query, key, and value vectors
     // dbuffer1 and dbuffer2 should be checked for correct values
     int half_buffer_size = num_heads*B*lrint(T*(T+1)/2);
-	int head_size = C / att->num_heads;
+	size_t head_size = C / att->num_heads;
 
     float* dbuffer = att->dbuffer;
     float* dbuffer1 = dbuffer;
     float* dbuffer2 = dbuffer + half_buffer_size;
 
 	float* buffer = att->buffer;
-	float* buffer1 = buffer;
 	float* buffer2 = buffer + half_buffer_size;
 
     // Check dbuffer2
     // dbuffer2 should be the output gradients multiplied by the value vector
-    for (int t = 0; t < T; t++) {
-        for (int t2 = 0; t2 <= t; t2++) {
+    for (size_t t = 0; t < T; t++) {
+        for (size_t t2 = 0; t2 <= t; t2++) {
             float expected_dbuffer2 = 0;
-            for (int i = 0; i < head_size; i++) {
+            for (size_t i = 0; i < head_size; i++) {
                 expected_dbuffer2 += out->act_grads[t] * in->act[t2 * 9 + 6 + i];
             }
             EXPECT_FLOAT_EQ(dbuffer2[t * (t + 1) / 2 + t2], expected_dbuffer2);
@@ -246,10 +244,10 @@ TEST_F(AttentionTest, Backward2){
 
     // Check dbuffer1
     // dbuffer1 should be the softmax gradients multiplied by the output gradients and the key vector
-    for (int t = 0; t < T; t++) {
-        for (int t2 = 0; t2 <= t; t2++) {
+    for (size_t t = 0; t < T; t++) {
+        for (size_t t2 = 0; t2 <= t; t2++) {
             float expected_dbuffer1 = 0;
-            for (int t3 = 0; t3 <= t; t3++) {
+            for (size_t t3 = 0; t3 <= t; t3++) {
 				float local_deriv = buffer2[t * (t+1) / 2 + t3] * ((t2==t3 ? 1.0f : 0.0f) - buffer2[t * (t+1) / 2 + t2]);
                 expected_dbuffer1 += dbuffer2[t * (t + 1) / 2 + t3] * local_deriv;
             }
@@ -261,13 +259,13 @@ TEST_F(AttentionTest, Backward2){
 
 TEST_F(AttentionTest, AllOnes) {
   size_t num_heads = 12;
-  Attention* att = new Attention(num_heads, maxT);
+  Attention* att = new Attention(num_heads);
 
   fillArrayWithOnes(in->act, in->size);
 
   att->forward(out, in);
 
-  for (int i = 0; i < out->size; i++){
+  for (size_t i = 0; i < out->size; i++){
     EXPECT_EQ(out->act[i], 1.0);
   }
 
@@ -276,7 +274,7 @@ TEST_F(AttentionTest, AllOnes) {
 
 TEST_F(AttentionTest, InvalidShapes) {
   size_t num_heads = 12;
-  Attention* att = new Attention(num_heads, maxT);
+  Attention* att = new Attention(num_heads);
 
   in->size = B*T*C;
   EXPECT_THROW(att->forward(out, in), std::invalid_argument);

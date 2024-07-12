@@ -51,17 +51,17 @@ TEST_F(EncoderTest, Forward) {
 	Encoder* encoder = new Encoder(params, nullptr, C, vocab_size);
 
 	// fill input with tokens
-    for (int i = 0; i < in->size; i++){
+    for (size_t i = 0; i < in->size; i++){
         in->act[i] = i;
     }
 
 	encoder->forward(out, in);
 
-	for (int i = 0; i < in->size; i++){
+	for (size_t i = 0; i < in->size; i++){
         float* token_embed = encoder->params + i*C;
         float* pos_embed = encoder->params + C * encoder->vocab_size + i%T * C;
         float* out_bt = out->act + i*C;
-        for (int j = 0; j < C; j++){
+        for (size_t j = 0; j < C; j++){
             EXPECT_FLOAT_EQ(token_embed[j] + pos_embed[j], out_bt[j]);
         }
 	}
@@ -85,18 +85,18 @@ TEST_F(EncoderTest, Backward) {
     fillArrayWithRandom(out->act_grads, out->size);
 
 	// fill input with tokens
-    for (int i = 0; i < in->size; i++){
+    for (size_t i = 0; i < in->size; i++){
         in->act[i] = i;
     }
 
 	encoder->backward(out, in);
 
-	for (int t = 0; t < T; t++){
+	for (size_t t = 0; t < T; t++){
 		// seek to position emebedding, wpe_g is (maxT, C)
 		float* pos_embed_g = wpe_g + t*C;
 		for (size_t i = 0; i < C; i++){
 			float deriv = 0;
-			for (int b = 0; b < B; b++){
+			for (size_t b = 0; b < B; b++){
 
 				// seek to output position
 				float* output_g = out->act_grads + b*T*C + t*C;

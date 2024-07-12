@@ -71,7 +71,7 @@ TEST_F(MatmulTest, Forward) {
         cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, T, OC, C, 1.0f, A, C, params, OC, 0.0f, out_, OC);
    }
 
-   for (int i = 0; i < out->size; i++) {
+   for (size_t i = 0; i < out->size; i++) {
         EXPECT_NEAR(out->act[i], expected_out[i], 1e-5);
    }
 
@@ -94,7 +94,7 @@ TEST_F(MatmulTest, Forward2) {
 
    // input is (1, 2, 3) tensor. [1, 2, 3
    //                             4, 5, 6]
-   for (int i = 0; i < B*T*C; i++){
+   for (size_t i = 0; i < B*T*C; i++){
       in->act[i] = i+1;
    }
 
@@ -102,7 +102,7 @@ TEST_F(MatmulTest, Forward2) {
    //                           10, 11, 12
    //                           13, 14, 15
    //                           16, 17, 18]
-   for (int i = 0; i < OC*C; i++){
+   for (size_t i = 0; i < OC*C; i++){
       params[i] = 7+i;
    }
 
@@ -113,7 +113,7 @@ TEST_F(MatmulTest, Forward2) {
 
    matmul->forward2(out, in);
 
-   for (int i = 0; i < T*OC; i++){
+   for (size_t i = 0; i < T*OC; i++){
       EXPECT_FLOAT_EQ(out->act[i], expected[i]);
    }
 
@@ -142,12 +142,12 @@ TEST_F(MatmulTest, Backward) {
 	matmul->backward(out, in);
 
 	// check gradient wrt input
-	for (int b = 0; b < B; b++){
-		for (int t = 0;  t < T; t++){
-			for (int c = 0; c < C; c++){
+	for (size_t b = 0; b < B; b++){
+		for (size_t t = 0;  t < T; t++){
+			for (size_t c = 0; c < C; c++){
 
 				float expected = 0.0f;
-				for (int i = 0; i < OC; i++){
+				for (size_t i = 0; i < OC; i++){
 					expected += matmul->params[ c*OC + i];
 				}
 				EXPECT_FLOAT_EQ(in->act_grads[b*T*C + t*C + c], expected);
@@ -158,19 +158,19 @@ TEST_F(MatmulTest, Backward) {
 	}
 
 	// check gradient wrt param
-	for (int i = 0; i < C; i++){
+	for (size_t i = 0; i < C; i++){
 
 		float expected = 0.0f;
-		for (int b = 0; b < B; b++){
+		for (size_t b = 0; b < B; b++){
 			float* A = in->act + b*T*C + i;
 			
-			for (int t = 0; t < T; t++){
+			for (size_t t = 0; t < T; t++){
 				expected += A[t*C];
 			}
 			
 		}
 
-		for (int j = 0 ; j < OC; j++){
+		for (size_t j = 0 ; j < OC; j++){
 			EXPECT_FLOAT_EQ(matmul->grad[i*OC + j], expected);
 		}
 
@@ -200,12 +200,12 @@ TEST_F(MatmulTest, Backward2) {
 	matmul->backward2(out, in);
 
 	// check gradient wrt input
-	for (int b = 0; b < B; b++){
-		for (int t = 0;  t < T; t++){
-			for (int c = 0; c < C; c++){
+	for (size_t b = 0; b < B; b++){
+		for (size_t t = 0;  t < T; t++){
+			for (size_t c = 0; c < C; c++){
 
 				float expected = 0.0f;
-				for (int i = 0; i < OC; i++){
+				for (size_t i = 0; i < OC; i++){
 					expected += matmul->params[ c + i*C];
 				}
 				EXPECT_FLOAT_EQ(in->act_grads[b*T*C + t*C + c], expected);
@@ -216,19 +216,19 @@ TEST_F(MatmulTest, Backward2) {
 	}
 
 	// check gradient wrt param
-	for (int i = 0; i < C; i++){
+	for (size_t i = 0; i < C; i++){
 
 		float expected = 0.0f;
-		for (int b = 0; b < B; b++){
+		for (size_t b = 0; b < B; b++){
 			float* A = in->act + b*T*C + i;
 			
-			for (int t = 0; t < T; t++){
+			for (size_t t = 0; t < T; t++){
 				expected += A[t*C];
 			}
 			
 		}
 
-		for (int j = 0 ; j < OC; j++){
+		for (size_t j = 0 ; j < OC; j++){
 			EXPECT_FLOAT_EQ(matmul->grad[j*C + i], expected);
 		}
 

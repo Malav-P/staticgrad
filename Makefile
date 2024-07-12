@@ -2,13 +2,13 @@
 CC = g++
 
 # Compiler flags
-CXXFLAGS := -Wextra -std=c++14 -fPIC -framework Accelerate -DACCELERATE_NEW_LAPACK #-Wall
+CXXFLAGS := -Wextra -std=c++14 -fPIC -framework Accelerate -DACCELERATE_NEW_LAPACK -Wall
 
 # Directory locations
 SRCDIR := StaticGrad/src
 INCDIR := StaticGrad/include
-TESTSRCDIR := test/src
-TESTINCDIR := test/include
+TEST_SRCDIR := test/src
+TEST_INCDIR := test/include
 TEST_BUILD_DIR := test/build
 
 # Library name
@@ -18,7 +18,7 @@ LIBNAME := libStaticGrad.a
 SRCS := $(wildcard ${SRCDIR}/*.cpp)
 
 # List of test source files
-TEST_SRCS := $(wildcard ${TESTSRCDIR}/*.cpp)
+TEST_SRCS := $(wildcard ${TEST_SRCDIR}/*.cpp)
 
 # List of object files
 OBJS := $(SRCS:.cpp=.o)
@@ -33,7 +33,7 @@ LIB_DIRS = -L/opt/homebrew/lib
 LIBS = -lgtest -lgtest_main -pthread
 
 # Include dirs
-INCLUDE_DIRS = -I/opt/homebrew/include/ -I./StaticGrad/include/ -I./test/include/ 
+INCLUDE_DIRS = -I/opt/homebrew/include/ -I./StaticGrad/include/ -I ${TEST_INCDIR}
 
 # Binary directory
 BIN_DIR = test/bin
@@ -60,7 +60,7 @@ ${SRCDIR}/%.o: ${SRCDIR}/%.cpp
 	g++ $(CXXFLAGS) -I ${INCDIR} -c $< -o $@
 
 # Rule to compile test source file into object files
-${TEST_BUILD_DIR}/%.o: ${TESTSRCDIR}/%.cpp
+${TEST_BUILD_DIR}/%.o: ${TEST_SRCDIR}/%.cpp
 	g++ $(CXXFLAGS) $(INCLUDE_DIRS) -c $< -o $@
 
 # Clean rule

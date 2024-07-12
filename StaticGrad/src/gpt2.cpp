@@ -41,7 +41,7 @@ GPT2::GPT2(size_t C_,
 
 
         for (int l = 0 ; l < L; l++){
-            tblocks.push_back(new TransformerBlock(p, g, C, NH, maxT));
+            tblocks.push_back(new TransformerBlock(p, g, C, NH));
             p += (12*C*C + 13*C);
             g += (12*C*C + 13*C);
         }

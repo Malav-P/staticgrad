@@ -50,9 +50,9 @@ class Encoder: public Operation {
         size_t C;
 
         Encoder(float* params_, float* grad_, size_t C_, size_t vocab_size_):
+            Operation(params_, grad_),
             vocab_size(vocab_size_),
-            C(C_),
-            Operation(params_, grad_) {}
+            C(C_){}
 
         void forward(Node* out, Node* in) override;
         void backward(Node* out, Node* in) override;
@@ -76,9 +76,9 @@ class LayerNorm : public Operation {
     
 
         LayerNorm(float* params_, float* grad_):
+        Operation(params_, grad_),
         rstd(nullptr),
-        m(nullptr),
-        Operation(params_, grad_) {}
+        m(nullptr){}
 
         void forward(Node* out, Node* in) override;
         void backward(Node* out, Node* in) override;
@@ -95,8 +95,8 @@ class Matmul : public Operation {
         float multiplier;
         
         Matmul(float* params_, float* grad_, float multiplier_ = 1.0):
-            multiplier(multiplier_),
-            Operation(params_, grad_) {}
+            Operation(params_, grad_),
+            multiplier(multiplier_){}
         
         void forward(Node* out, Node* in) override;
         void backward(Node* out, Node* in) override;
@@ -112,7 +112,7 @@ class Attention : public Operation {
         float* buffer;
         float* dbuffer;
 
-        Attention(size_t num_heads_, size_t maxT):
+        Attention(size_t num_heads_):
             Operation(nullptr, nullptr),
             num_heads(num_heads_),
             buffer(nullptr),
@@ -145,8 +145,8 @@ class Softmax : public Operation {
         float temperature;
 
         Softmax(float temp):
-            temperature(temp),
-            Operation(nullptr, nullptr){}
+            Operation(nullptr, nullptr),
+            temperature(temp){}
 
         void forward(Node* out, Node* in) override;
         void backward(Node* out, Node* in) override;
@@ -189,7 +189,7 @@ class TransformerBlock : public Operation {
         RowAdd* ra4;
         Add* res2;
 
-        TransformerBlock(float* params_, float* grad_, size_t C, size_t NH, size_t maxT); // constructor
+        TransformerBlock(float* params_, float* grad_, size_t C, size_t NH); // constructor
         ~TransformerBlock(); // destructor
 
         

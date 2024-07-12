@@ -56,7 +56,7 @@ class LayerNormTest : public ::testing::Test {
 TEST_F(LayerNormTest, ForwardPass) {
 	fillArrayWithRandom(in->act, in->size);
 
-	for (int i = 0; i<C; i++){
+	for (size_t i = 0; i<C; i++){
 		layer_norm->params[i] = 1.0f;
 		layer_norm->params[i+C] = 0.0f;
 	}
@@ -67,7 +67,7 @@ TEST_F(LayerNormTest, ForwardPass) {
 	float mean = 0.0f;
 
 	// calc mean
-	for (int i = 0; i<C; i++){
+	for (size_t i = 0; i<C; i++){
 	mean += out->act[i];
 	}
 	mean = mean/C;
@@ -88,7 +88,7 @@ TEST_F(LayerNormTest, ForwardPass) {
 TEST_F(LayerNormTest, ScaleShift) {
   fillArrayWithRandom(in->act, in->size);
 
-  for (int i = 0; i<C; i++){
+  for (size_t i = 0; i<C; i++){
       layer_norm->params[i] = 2.0f;
       layer_norm->params[i+C] = 1.0f;
   }
@@ -98,7 +98,7 @@ TEST_F(LayerNormTest, ScaleShift) {
   float mean = 0.0f;
 
   // calc mean
-  for (int i = 0; i<C; i++){
+  for (size_t i = 0; i<C; i++){
     mean += out->act[i];
   }
   mean = mean/C;
@@ -116,7 +116,7 @@ TEST_F(LayerNormTest, ScaleShift) {
   EXPECT_NEAR(v, 4.0f, 1e-3);
 
   // Check that the output values are scaled and shifted correctly
-  for (int i = 0; i < C; i++) {
+  for (size_t i = 0; i < C; i++) {
     float expected = layer_norm->params[i] * (layer_norm->rstd[0])*(in->act[i] - layer_norm->m[0]) + layer_norm->params[i + C];
     EXPECT_NEAR(out->act[i], expected, 1e-5);
   }
@@ -159,10 +159,10 @@ TEST_F(LayerNormTest, Backward){
 	layer_norm->backward(out, in);
 
 	// check shift (bias) gradients
-	for (int i = 0; i < C; i++){
+	for (size_t i = 0; i < C; i++){
 		float expected = 0.0f;
-		for (int b = 0; b < B; b++){
-			for (int t = 0; t < T; t++){
+		for (size_t b = 0; b < B; b++){
+			for (size_t t = 0; t < T; t++){
 				expected += out->act_grads[b*T*C + t*C + i];
 			}
 		}
@@ -170,10 +170,10 @@ TEST_F(LayerNormTest, Backward){
 	}
 
 	// Check scale (weight) gradients
-	for (int i = 0; i < C; i++){
+	for (size_t i = 0; i < C; i++){
 		float expected = 0.0f;
-		for (int b = 0; b < B; b++){
-			for (int t = 0; t < T; t++){
+		for (size_t b = 0; b < B; b++){
+			for (size_t t = 0; t < T; t++){
 				expected += out->act_grads[b*T*C + t*C + i] * (in->act[b*T*C + t*C + i] - layer_norm->m[b*T + t]) * layer_norm->rstd[b*T + t];
 			}
 		}

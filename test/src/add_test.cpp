@@ -50,7 +50,7 @@ TEST_F(AddTest, ToArrayofOne) {
 
   add->forward(out, in);
 
-  for (int i = 0; i < out->size; i++){
+  for (size_t i = 0; i < out->size; i++){
     EXPECT_EQ(out->act[i], 1.0f + in->act[i]);
   }
 
@@ -64,13 +64,13 @@ TEST_F(AddTest, ToArrayofRandom) {
   fillArrayWithRandom(out->act, out->size);
 
   float* expected = new float[out->size];
-  for (int i = 0; i < out->size; i++) {
+  for (size_t i = 0; i < out->size; i++) {
     expected[i] = in->act[i] + out->act[i];
   }
 
   add->forward(out, in);
 
-  for (int i = 0; i < out->size; i++){
+  for (size_t i = 0; i < out->size; i++){
     EXPECT_EQ(out->act[i], expected[i]);
   }
 
@@ -86,7 +86,7 @@ TEST_F(AddTest, ToArrayofZeros) {
 
 	add->forward(out, in);
 
-	for (int i = 0; i < out->size; i++){
+	for (size_t i = 0; i < out->size; i++){
 	EXPECT_EQ(out->act[i], in->act[i]);
 	}
 
@@ -129,13 +129,13 @@ TEST_F(AddTest, Backward){
 
 	add->backward(out, in);
 
-	for (int i = 0; i < in->size; i++){
+	for (size_t i = 0; i < in->size; i++){
 		EXPECT_FLOAT_EQ(in->act_grads[i], out->act_grads[i]);
 	}
 
 	add->backward(out, in);
 
-	for (int i = 0; i < in->size; i++){
+	for (size_t i = 0; i < in->size; i++){
 		EXPECT_FLOAT_EQ(in->act_grads[i], 2*out->act_grads[i]);
 	}
 }
@@ -150,7 +150,7 @@ TEST_F(AddTest, InPlaceBackward){
 
 	add->backward(out, out);
 
-	for (int i = 0; i < in->size; i++){
+	for (size_t i = 0; i < in->size; i++){
 		EXPECT_FLOAT_EQ(out->act_grads[i], 2*buffer[i]);
 	}
 
@@ -168,7 +168,7 @@ TEST_F(AddTest, InPlaceForward){
 
 	add->forward(out, out);
 
-	for (int i = 0; i < in->size; i++){
+	for (size_t i = 0; i < in->size; i++){
 		EXPECT_FLOAT_EQ(out->act[i], 2*buffer[i]);
 	}
 

@@ -180,7 +180,7 @@ void Encoder::backward(Node* out, Node* in){
  * @note 
  * - The constructor dynamically allocates memory for various internal nodes and layers. Hence, it is crucial to handle exceptions during construction.
  */
-TransformerBlock::TransformerBlock(float* params_, float* grad_, size_t C, size_t NH, size_t maxT):
+TransformerBlock::TransformerBlock(float* params_, float* grad_, size_t C, size_t NH):
     Operation(params_, grad_),
     res1_node(nullptr),
     res2_node(nullptr) {
@@ -210,7 +210,7 @@ TransformerBlock::TransformerBlock(float* params_, float* grad_, size_t C, size_
         layer_param += 3*C;
         layer_grad += 3*C;
 
-        att = new Attention(NH, maxT);
+        att = new Attention(NH);
 
         mat2 = new Matmul(layer_param, layer_grad);
         layer_param += C*C;
@@ -459,6 +459,7 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
     size_t B = in->shape[0];
     size_t T = in->shape[1];
     size_t C = in->shape[2] / 3;
+
 
     size_t head_size = C / num_heads;
 
@@ -765,7 +766,6 @@ void LayerNorm::backward(Node* out, Node* in){
     float* b_g = grad+C;
 
     float* w = params;
-    float* b = params+C;
 
     for (size_t b = 0; b < B; b++){
         for (size_t t = 0; t < T; t++){
@@ -830,7 +830,7 @@ void Matmul::forward(Node* out, Node* in) {
 
     size_t B = in->shape[0];
     size_t T = in->shape[1],  C = in->shape[2];
-    size_t p = C,  n = out->shape[2];
+    size_t n = out->shape[2];
     
     float alpha = multiplier, beta = 0.0f;
     float* B_ = params;
