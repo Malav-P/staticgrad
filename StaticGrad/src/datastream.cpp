@@ -53,7 +53,7 @@ void DataStream::load_buffer(){
 }
 
 
-void DataStream::buffer_to_Node(Node* node, int num_tokens){
+void DataStream::buffer_to_Node(Node* node, size_t num_tokens){
     if (node->size < num_tokens){
         throw std::invalid_argument("node is too small to transfer number of requested tokens");
     }
@@ -62,7 +62,7 @@ void DataStream::buffer_to_Node(Node* node, int num_tokens){
         throw std::invalid_argument("buffer is too small to transfer number of requested tokens");
     }
 
-    for (int i = 0; i < num_tokens; i++){
+    for (size_t i = 0; i < num_tokens; i++){
         node->act[i] = buffer[i];
     }
 }

@@ -33,7 +33,7 @@ TEST_F(GPT2Test, Constructor) {
     B = 4; // batch size
     T = 64; // sequence length
 
-    GPT2* model;
+    GPT2* model = nullptr;
 
     EXPECT_NO_THROW(model = new GPT2(C, L, V, maxT, NH));
     EXPECT_EQ(model->tblocks.size(), L); // expect L transformer blocks
@@ -47,7 +47,7 @@ TEST_F(GPT2Test, DefaultConstructor) {
     maxT = 1024; // max sequence length
     NH = 12; // number of attention heads
 
-    GPT2* model;
+    GPT2* model = nullptr;
 
     EXPECT_NO_THROW(model = new GPT2());
 
@@ -93,7 +93,7 @@ TEST_F(GPT2Test, Forward) {
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> distrib(0, V-1);
 
-    for (int i = 0; i < B*T; i++) {
+    for (size_t i = 0; i < B*T; i++) {
         in->act[i] = distrib(gen);
     }
 
@@ -101,7 +101,7 @@ TEST_F(GPT2Test, Forward) {
     fillArrayWithRandom(model->params, model->num_params);
 
     // check outputs are zero
-    for (int i = 0; i < out->size; i++){
+    for (size_t i = 0; i < out->size; i++){
         EXPECT_FLOAT_EQ(out->act[i], 0.0f);
     }
 
@@ -118,11 +118,11 @@ TEST_F(GPT2Test, Forward) {
     std::cout << "Time taken by forward(): " << duration.count() << " ms" << std::endl;
 
     // each array at (b, t) position should sum to one
-    for (int b = 0; b < B; b++){
-        for (int t = 0; t < T; t++){
+    for (size_t b = 0; b < B; b++){
+        for (size_t t = 0; t < T; t++){
             float* probs = out->act + b * T*V + t * V;
             float sum = 0.0f;
-            for (int v = 0; v < V; v++){
+            for (size_t v = 0; v < V; v++){
                 float p = probs[v];
                 EXPECT_LE(p, 1.0f);
                 EXPECT_GE(p, 0.0f);
@@ -168,7 +168,7 @@ TEST_F(GPT2Test, Backward) {
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> distrib(0, V-1);
 
-    for (int i = 0; i < B*T; i++) {
+    for (size_t i = 0; i < B*T; i++) {
         in->act[i] = distrib(gen);
     }
 
@@ -176,7 +176,7 @@ TEST_F(GPT2Test, Backward) {
     fillArrayWithRandom(model->params, model->num_params);
 
     // check outputs are zero
-    for (int i = 0; i < out->size; i++){
+    for (size_t i = 0; i < out->size; i++){
         EXPECT_FLOAT_EQ(out->act[i], 0.0f);
     }
 
@@ -185,7 +185,7 @@ TEST_F(GPT2Test, Backward) {
 
 
     // fill output grad
-    for (int j = 0; j < out->size; j++){
+    for (size_t j = 0; j < out->size; j++){
         out->act_grads[j] = 1.0f;
     }
 
@@ -214,7 +214,9 @@ TEST_F(GPT2Test, InvalidNumHeads) {
     B = 4; // batch size
     T = 64; // sequence length
 
-    EXPECT_THROW(GPT2* model = new GPT2(C, L, V, maxT, NH), std::invalid_argument);
+    GPT2* model = nullptr;
+
+    EXPECT_THROW(model = new GPT2(C, L, V, maxT, NH), std::invalid_argument);
 
 }
 
@@ -229,7 +231,7 @@ TEST_F(GPT2Test, ZeroGrad) {
     GPT2* gpt2 = new GPT2(C, L, V, maxT, NH);
 
     // Set some gradients to non-zero values
-    for (int i = 0; i < gpt2->num_params; i++) {
+    for (size_t i = 0; i < gpt2->num_params; i++) {
         gpt2->grad[i] = 1.0f;
     }
 
@@ -246,7 +248,7 @@ TEST_F(GPT2Test, ZeroGrad) {
 
 
     // Check if all gradients are zero
-    for (int i = 0; i < gpt2->num_params; i++) {
+    for (size_t i = 0; i < gpt2->num_params; i++) {
         EXPECT_FLOAT_EQ(gpt2->grad[i], 0.0f);
     }
 
@@ -267,7 +269,7 @@ TEST_F(GPT2Test, Update) {
 
     EXPECT_NO_THROW(gpt2->update(1));
 
-    for (int i = 0; i < gpt2->num_params; i++){
+    for (size_t i = 0; i < gpt2->num_params; i++){
         EXPECT_FLOAT_EQ(gpt2->m[i], (1 - gpt2->beta1) * gpt2->grad[i]);
         EXPECT_FLOAT_EQ(gpt2->v[i], (1 - gpt2->beta2) * gpt2->grad[i] * gpt2->grad[i] );
     }

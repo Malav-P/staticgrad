@@ -40,7 +40,7 @@ GPT2::GPT2(size_t C_,
         g += V*C + maxT*C;
 
 
-        for (int l = 0 ; l < L; l++){
+        for (size_t l = 0 ; l < L; l++){
             tblocks.push_back(new TransformerBlock(p, g, C, NH));
             p += (12*C*C + 13*C);
             g += (12*C*C + 13*C);
@@ -56,7 +56,7 @@ GPT2::GPT2(size_t C_,
         float temperature = 1.0f;
         softmax = new Softmax(temperature);
 
-        if (p - params != num_params || g - grad != num_params){
+        if (p - params != static_cast<int>(num_params) || g - grad != static_cast<int>(num_params)){
             throw std::runtime_error("parameter allocation incorrect");
         }
 
@@ -70,7 +70,7 @@ GPT2::~GPT2(){
     delete unembedding;
     delete final_layernorm;
 
-    for (int l = 0; l < L; l++){
+    for (size_t l = 0; l < L; l++){
         delete tblocks[l];
     }
 
@@ -193,7 +193,7 @@ size_t gpt2_memrequirement(size_t C, size_t L, size_t vocab_size, size_t max_seq
  * 
  */
 void GPT2::update(int t){
-    for (int i = 0; i < num_params; i++){
+    for (size_t i = 0; i < num_params; i++){
         float g_ = grad[i];
 
         m[i] = beta1 * m[i] + (1-beta1)*g_;
@@ -249,7 +249,7 @@ void GPT2::forward(Node* out, Node* in){
     encoder->forward(out_internal, in_internal);
 
     // forward through the transformer blocks
-    for (int i = 0; i < L; i++){
+    for (size_t i = 0; i < L; i++){
         TransformerBlock* tblock = tblocks[i];
 
         // set up in_internal and out_internal
@@ -321,8 +321,8 @@ void GPT2::backward(Node* out, Node* in){
     shift_back(out_internal, in_internal, {B, T, C});
     final_layernorm->backward(out_internal, in_internal);
 
-    // backward through the transformer blocks
-    for (int i = L-1; i >=0 ; i--){
+    // backward through the transformer blocks 
+    for (int i = L-1; i >=0 ; i--){  // the loop variable i must be int not size_t, otherwise it will crash the code
         TransformerBlock* tblock = tblocks[i];
 
         // set up in_internal and out_internal

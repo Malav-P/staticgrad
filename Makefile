@@ -114,6 +114,6 @@ tokenizer: $(TEST_BUILD_DIR)/tokenizer_test.o $(SRCDIR)/tokenizer.o
 interface: $(TEST_BUILD_DIR)/interface_test.o $(SRCDIR)/interface.o $(SRCDIR)/gpt2.o $(SRCDIR)/datastream.o $(SRCDIR)/tokenizer.o $(SRCDIR)/utils.o $(SOURCES)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/$@ $^ $(LIBS) $(LIB_DIRS)
 
-train: $(TEST_BUILD_DIR)/train_test.o $(SRCDIR)/interface.o $(SRCDIR)/gpt2.o $(SRCDIR)/datastream.o $(SRCDIR)/tokenizer.o $(SRCDIR)/utils.o $(SOURCES)
-	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/$@ $^ $(LIBS) $(LIB_DIRS)
+train: $(TEST_BUILD_DIR)/train_test.o $(LIBNAME)
+	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/$@ $^ $(LIBS) $(LIB_DIRS) 
 

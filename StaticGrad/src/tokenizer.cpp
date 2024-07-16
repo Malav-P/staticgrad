@@ -79,7 +79,7 @@ std::string Tokenizer::decode(u_int16_t* tokenIDs, int length) {
 std::string Tokenizer::decode(const std::vector<u_int16_t>& tokenIDs) {
 
     std::string result;
-    for (int i = 0; i < tokenIDs.size(); i++) {
+    for (size_t i = 0; i < tokenIDs.size(); i++) {
         u_int16_t key = tokenIDs[i];
         if (key < 0 || key >= token_map.size()){
             throw std::out_of_range("key is out of range of vocab size");
@@ -105,7 +105,7 @@ std::vector<u_int16_t> Tokenizer::encode(const std::string& str) {
 
     while (!remainingStr.empty()) {
         bool found = false;
-        int maxLength = 0;
+        size_t maxLength = 0;
         u_int16_t maxTokenId = 0;
 
         for (const auto& pair : token_map) {

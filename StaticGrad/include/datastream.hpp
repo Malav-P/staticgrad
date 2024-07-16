@@ -26,7 +26,7 @@ class DataStream {
         void close();
 
         void load_buffer();
-        void buffer_to_Node(Node* node, int num_tokens);
+        void buffer_to_Node(Node* node, size_t num_tokens);
 
         ~DataStream(){
             close();

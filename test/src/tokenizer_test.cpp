@@ -43,7 +43,7 @@ TEST_F(TokenizerTest, Encode) {
     std::string str = "hello world";
     std::vector<u_int16_t> tokenIDs = tk.encode(str);
 
-    EXPECT_GT(tokenIDs.size(), 0);
+    EXPECT_GT(tokenIDs.size(), size_t(0));
 
     std::cout << "encoded: ";
     for (auto token : tokenIDs){

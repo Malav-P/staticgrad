@@ -76,7 +76,7 @@ TEST_F(UtilsTest, crossentropy_softmax_backward) {
 
     EXPECT_NO_THROW(crossentropy_softmax_backward(out, in, targets, temp));
 
-    for(int i = 0; i < V; i++){
+    for(size_t i = 0; i < V; i++){
         float indicator = (i == targets[0]) ? 1.0f : 0.0f;
         float expected = (softmax_out[i] - indicator) / (B*T) / temp;
         EXPECT_FLOAT_EQ(in->act_grads[i], expected);
@@ -104,7 +104,9 @@ TEST_F(UtilsTest, sample_token) {
     float probabilities[] = {0.4, 0.1, 0.2, 0.3};
     int length = sizeof(probabilities) / sizeof(float);
 
-    EXPECT_NO_THROW(int token = sample_token(probabilities, length));
+    int token = 0;
+
+    EXPECT_NO_THROW(token = sample_token(probabilities, length));
 
     int* counts = new int[length];
     for (int i = 0; i < 10000; i++){

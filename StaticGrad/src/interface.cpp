@@ -209,7 +209,7 @@ void train(int max_batches){
         model->update(t+1);
 
         float loss_val = 0.0f;
-        for (int i = 0; i < B*T; i++){
+        for (size_t i = 0; i < B*T; i++){
             loss_val += loss->act[i];
         }
         loss_val = loss_val / (B*T);

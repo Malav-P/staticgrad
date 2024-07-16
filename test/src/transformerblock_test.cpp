@@ -58,12 +58,11 @@ class TransformerBlockTest : public ::testing::Test {
 
 TEST_F(TransformerBlockTest, InvalidNumHeads) {
 	size_t num_heads = 11; // 768 is not divisible by 11
-	TransformerBlock* tblock;
+	TransformerBlock* tblock = nullptr;
 	EXPECT_THROW(tblock = new TransformerBlock(params, params_grad, C, num_heads), std::invalid_argument);
 
 	num_heads = 0; // 768 is not divisible by 0
 	EXPECT_THROW(tblock = new TransformerBlock(params, params_grad, C, num_heads), std::invalid_argument);
-
 }
 
 
@@ -146,45 +145,47 @@ TEST_F(TransformerBlockTest, ParameterAllocation) {
 	size_t num_heads = 12;
 	TransformerBlock* tblock = new TransformerBlock(params, params_grad, C, num_heads);
 
+	int c = C;
+
 	// first layernorm
-	EXPECT_EQ(tblock->mat1->params - tblock->ln1->params, 2*C);
-	EXPECT_EQ(tblock->mat1->grad - tblock->ln1->grad, 2*C);
+	EXPECT_EQ(tblock->mat1->params - tblock->ln1->params, 2*c);
+	EXPECT_EQ(tblock->mat1->grad - tblock->ln1->grad, 2*c);
 
 	// first matmul
-	EXPECT_EQ(tblock->ra1->params - tblock->mat1->params, 3*C*C);
-	EXPECT_EQ(tblock->ra1->grad - tblock->mat1->grad, 3*C*C);
+	EXPECT_EQ(tblock->ra1->params - tblock->mat1->params, 3*c*c);
+	EXPECT_EQ(tblock->ra1->grad - tblock->mat1->grad, 3*c*c);
 
 	// first row add
-	EXPECT_EQ(tblock->mat2->params - tblock->ra1->params, 3*C);
-	EXPECT_EQ(tblock->mat2->grad - tblock->ra1->grad, 3*C);
+	EXPECT_EQ(tblock->mat2->params - tblock->ra1->params, 3*c);
+	EXPECT_EQ(tblock->mat2->grad - tblock->ra1->grad, 3*c);
 
 	// second matmul
-	EXPECT_EQ(tblock->ra2->params - tblock->mat2->params, C*C);
-	EXPECT_EQ(tblock->ra2->grad - tblock->mat2->grad, C*C);
+	EXPECT_EQ(tblock->ra2->params - tblock->mat2->params, c*c);
+	EXPECT_EQ(tblock->ra2->grad - tblock->mat2->grad, c*c);
 
 	// second rowadd
-	EXPECT_EQ(tblock->ln2->params - tblock->ra2->params, C);
-	EXPECT_EQ(tblock->ln2->grad - tblock->ra2->grad, C);
+	EXPECT_EQ(tblock->ln2->params - tblock->ra2->params, c);
+	EXPECT_EQ(tblock->ln2->grad - tblock->ra2->grad, c);
 
 	// second layernorm
-	EXPECT_EQ(tblock->mat3->params - tblock->ln2->params, 2*C);
-	EXPECT_EQ(tblock->mat3->grad - tblock->ln2->grad, 2*C);
+	EXPECT_EQ(tblock->mat3->params - tblock->ln2->params, 2*c);
+	EXPECT_EQ(tblock->mat3->grad - tblock->ln2->grad, 2*c);
 
 	// third matmul
-	EXPECT_EQ(tblock->ra3->params - tblock->mat3->params, 4*C*C);
-	EXPECT_EQ(tblock->ra3->grad - tblock->mat3->grad, 4*C*C);
+	EXPECT_EQ(tblock->ra3->params - tblock->mat3->params, 4*c*c);
+	EXPECT_EQ(tblock->ra3->grad - tblock->mat3->grad, 4*c*c);
 
 	// third rowadd
-	EXPECT_EQ(tblock->mat4->params - tblock->ra3->params, 4*C);
-	EXPECT_EQ(tblock->mat4->grad - tblock->ra3->grad, 4*C);
+	EXPECT_EQ(tblock->mat4->params - tblock->ra3->params, 4*c);
+	EXPECT_EQ(tblock->mat4->grad - tblock->ra3->grad, 4*c);
 
 	// fourth matmul
-	EXPECT_EQ(tblock->ra4->params - tblock->mat4->params, 4*C*C);
-	EXPECT_EQ(tblock->ra4->grad - tblock->mat4->grad, 4*C*C);
+	EXPECT_EQ(tblock->ra4->params - tblock->mat4->params, 4*c*c);
+	EXPECT_EQ(tblock->ra4->grad - tblock->mat4->grad, 4*c*c);
 
 	// fourth row add
-	EXPECT_EQ(params + 12*C*C + 13*C - tblock->ra4->params, C);
-	EXPECT_EQ(params_grad + 12*C*C + 13*C- tblock->ra4->grad, C);
+	EXPECT_EQ(params + 12*C*C + 13*C - tblock->ra4->params, c);
+	EXPECT_EQ(params_grad + 12*C*C + 13*C- tblock->ra4->grad, c);
 
 
 	delete tblock;
