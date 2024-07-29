@@ -1,4 +1,8 @@
 #include "utils.hpp"
+#include <random>
+#include <fstream>
+
+
 
 /**
  * Computes the cross-entropy loss for a given set of input probabilities and target labels.
@@ -79,7 +83,7 @@ void crossentropy_softmax_backward(Node* out, Node* in, u_int16_t* targets, floa
  * Throws:
  *   std::invalid_argument if the probabilities are not valid (i.e., non-negative and summing up to 1).
  */
-int sample_token(float* probabilities, int length, bool random){
+u_int16_t sample_token(float* probabilities, size_t length, bool random){
 
     // Check if probabilities are valid
     float sum = 0.0;

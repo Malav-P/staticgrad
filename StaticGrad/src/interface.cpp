@@ -5,6 +5,9 @@
 #include "utils.hpp"
 
 
+
+
+
 /**
 * Allocates and initializes the GPT-2 model, data stream, tokenizer, and nodes for a specified batch size and sequence length.
 *
@@ -34,8 +37,8 @@ void setup(GPT2*& model,
            Node*& out, 
            Node*& in,
            size_t B, // batch size
-           size_t T,
-           bool pretrained) // sequence length
+           size_t T, // sequence length
+           bool pretrained) 
 {
     
     if (model != nullptr){

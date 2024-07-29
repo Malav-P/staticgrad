@@ -86,7 +86,7 @@ TEST_F(UtilsTest, crossentropy_softmax_backward) {
 
 TEST_F(UtilsTest, InvalidInputTest) {
     float probabilities[] = {0.1, 0.2, -0.3, 0.4};
-    int length = sizeof(probabilities) / sizeof(probabilities[0]);
+    size_t length = sizeof(probabilities) / sizeof(probabilities[0]);
 
     // Check that the function throws an exception when given invalid input
     EXPECT_THROW(sample_token(probabilities, length), std::invalid_argument);
@@ -94,7 +94,7 @@ TEST_F(UtilsTest, InvalidInputTest) {
 
 TEST_F(UtilsTest, InvalidSum) {
     float probabilities[] = {0.1, 0.2, 0.3, 0.3};
-    int length = sizeof(probabilities) / sizeof(probabilities[0]);
+    size_t length = sizeof(probabilities) / sizeof(probabilities[0]);
 
     // Check that the function throws an exception when given invalid input
     EXPECT_THROW(sample_token(probabilities, length), std::invalid_argument);
@@ -102,15 +102,15 @@ TEST_F(UtilsTest, InvalidSum) {
 
 TEST_F(UtilsTest, sample_token) {
     float probabilities[] = {0.4, 0.1, 0.2, 0.3};
-    int length = sizeof(probabilities) / sizeof(float);
+    size_t length = sizeof(probabilities) / sizeof(float);
 
-    int token = 0;
+    u_int16_t token = 0;
 
     EXPECT_NO_THROW(token = sample_token(probabilities, length));
 
     int* counts = new int[length];
     for (int i = 0; i < 10000; i++){
-        int token = sample_token(probabilities, 4, true);
+        u_int16_t token = sample_token(probabilities, 4, true);
         
         counts[token] += 1;
         

@@ -2,9 +2,7 @@
 #define CLASSES_HPP
 
 #include <vector>
-#include <stdexcept>
-#include <iostream>
-#include <Accelerate/Accelerate.h>
+
 
 class Node {
     public:

@@ -22,8 +22,8 @@ void tear_down( GPT2*& model,
                 Tokenizer*& tk,
                 Node*& out, 
                 Node*& in);
-                
 
+            
 void train(int max_batches);
 
 #endif //INTERFACE_HPP

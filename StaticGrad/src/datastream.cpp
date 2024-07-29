@@ -1,4 +1,6 @@
 #include "datastream.hpp"
+#include <memory>
+#include <iostream>
 
 void DataStream::init_buffer(int num_tokens){
 

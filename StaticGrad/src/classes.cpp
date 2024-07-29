@@ -1,5 +1,8 @@
 #include "classes.hpp"
 #include <cmath>
+#include <stdexcept>
+#include <iostream>
+#include <Accelerate/Accelerate.h>
 
 
 /**
