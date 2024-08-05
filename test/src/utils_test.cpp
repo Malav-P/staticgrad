@@ -138,7 +138,7 @@ TEST_F(UtilsTest, sample_token) {
  */
 TEST_F(UtilsTest, load_weights) {
 
-    std::string filepath = "/Users/malavpatel/Coding_Projects/StaticGrad/models/gpt2.bin";
+    std::string filepath = "/Users/malavpatel/Coding_Projects/StaticGrad/models/gpt2_weights.bin";
 
     int num_params = 124439808;
     auto params = new float[num_params]; // num parameters in gpt2 is 124439808

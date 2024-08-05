@@ -1,5 +1,6 @@
 #include "gpt2.hpp"
 
+
  /**
   * Constructor for the GPT2 class.
   *
@@ -51,7 +52,6 @@ GPT2::GPT2(size_t C_,
         g += C + C;
 
         unembedding = new Matmul(params, grad);
-
 
         float temperature = 1.0f;
         softmax = new Softmax(temperature);
@@ -208,6 +208,8 @@ void GPT2::update(int t){
     }
 }
 
+
+
 /**
  * @brief Performs the forward pass of the GPT-2 model.
  *
@@ -248,6 +250,7 @@ void GPT2::forward(Node* out, Node* in){
 
     encoder->forward(out_internal, in_internal);
 
+
     // forward through the transformer blocks
     for (size_t i = 0; i < L; i++){
         TransformerBlock* tblock = tblocks[i];
@@ -265,6 +268,7 @@ void GPT2::forward(Node* out, Node* in){
 
         // forward through i-th TransformerBlock
         tblock->forward(out_internal, in_internal);
+
     }
 
     // forward through layernorm

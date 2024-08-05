@@ -35,8 +35,75 @@ u_int16_t next_token(GPT2*& model,
     model->forward(out, in);
 
     float* probabilities = out->act + (t-1)*V;
-    u_int16_t next_token = sample_token(probabilities, V, false);
+    u_int16_t next_tok = sample_token(probabilities, V, true);
 
-    return next_token;
+    return next_tok;
+
+}
+
+void yap(GPT2*& model,
+         Tokenizer*& tk,
+         Node*& out,
+         Node*& in,
+         std::string start){
+
+    // IF STRING == "" then fill in node with EOT TOKENS
+        // t = 1 for next_token call
+
+    // ELSE 
+        // DECODE STRINGS INTO TOKEN VECTOR AND PLACE INTO BUFFER
+        // decide variable t for next_token call
+
+
+    // AUTOGENERATE TOKENS UNTIL t = T (i.e. we guess the Tth token, counting starts at 0 inclusive)
+
+
+    // maybe check / assert B = 1
+
+
+    size_t T = in->shape[1];
+    u_int16_t eot = 50256;
+    size_t t; // for next_token call
+
+    std::string decoded_tokens = start;
+
+    if (start.empty() ){
+
+        for (size_t i = 0; i < T; i++){
+            in->act[i] = eot;
+        }
+
+        t = 1;
+    }
+
+    else {
+
+        std::vector<u_int16_t> encoded = tk->encode(start);
+        size_t num_tokens = encoded.size();
+
+        for (size_t i = 0; i < num_tokens; i++){
+            in->act[i] = encoded[i];
+        }
+
+        for (size_t i = num_tokens; i < T; i++){
+            in->act[i] = eot;
+        }
+
+        t = num_tokens;
+
+    }
+
+    // autogenerate tokens
+    std::cout << start;
+    for (size_t i = t; i < T; i++){
+        u_int16_t next_tok = next_token(model, tk, out, in, i);
+        
+        in->act[i] = next_tok;
+        std::string next_tok_dec = tk->decode({next_tok});
+        std::cout << next_tok_dec << std::flush;
+
+        decoded_tokens += next_tok_dec;
+    }
+
 
 }

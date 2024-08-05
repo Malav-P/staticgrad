@@ -70,7 +70,7 @@ TEST_F(DataStreamTest, openinvalidfile) {
  * and that the buffer is loaded with data from the file. It also checks that
  * the first token in the buffer is not the GPT-2 EOT token (50256).
  */
-TEST_F(DataStreamTest, loadbuffer) {
+TEST_F(DataStreamTest, tinystories) {
 
     std::string filepath = "/Users/malavpatel/Coding_Projects/StaticGrad/tokenizer/tokens/tinystories.bin";
     ds->open(filepath);
@@ -79,6 +79,22 @@ TEST_F(DataStreamTest, loadbuffer) {
 
     EXPECT_NO_THROW(ds->load_buffer());
     EXPECT_EQ(ds->buffer[0], 50256); // first token is gpt2 eot token
+
+    // load another batch
+    ds->load_buffer();
+    EXPECT_NE(ds->buffer[0], 50256); // first token will generally not be the eot token
+
+}
+
+TEST_F(DataStreamTest, tinyshakespeare) {
+
+    std::string filepath = "/Users/malavpatel/Coding_Projects/StaticGrad/tokenizer/tokens/tinyshakespeare.bin";
+    ds->open(filepath);
+
+    ds->init_buffer(64);
+
+    EXPECT_NO_THROW(ds->load_buffer());
+    EXPECT_EQ(ds->buffer[0], 9203); // first token is gpt2 eot token
 
     // load another batch
     ds->load_buffer();

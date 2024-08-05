@@ -71,14 +71,14 @@ void setup(GPT2*& model,
 
     if (pretrained){
         int expected_bytes = sizeof(float) * 124439808;
-        std::string weights_file = "/Users/malavpatel/Coding_Projects/StaticGrad/models/gpt2.bin";
+        std::string weights_file = "/Users/malavpatel/Coding_Projects/StaticGrad/models/gpt2_weights.bin";
         load_weights(model->params, weights_file, expected_bytes);
 
         // The gpt2.bin file represents weight token embedding matrix as shape (V, C). In this code, we assume the weight token embedding matrix
         // also has shape (V, C)
     }
 
-    std::string fp_ds = "/Users/malavpatel/Coding_Projects/StaticGrad/tokenizer/tokens/tinystories.bin";
+    std::string fp_ds = "/Users/malavpatel/Coding_Projects/StaticGrad/tokenizer/tokens/tinyshakespeare.bin";
     ds = new DataStream();
     ds->open(fp_ds);
     ds->init_buffer(B*T + 1); // +1 to include necessary target tokens for training
@@ -103,7 +103,18 @@ void setup(GPT2*& model,
     out->shape = {B, T, V};
     out->size = B*T*V;
 
-    std::cout << "\nsetup complete, gpt2 model instantiated with " << model->num_params << " parameters and " << num_acts + L*2*B*T + L*NH*B*T*(T+1) + 2*B*T << " activations" << std::endl;    
+    // + L*2*B*T + L*NH*B*T*(T+1) + 2*B*T
+
+
+    std::cout << "GPT-2 Small" << std::endl;
+    std::cout << "max seq len: " << maxT << std::endl;
+    std::cout << "embedding dimension: " << C << std::endl;
+    std::cout << "vocab size: " << V << std::endl;
+    std::cout << "num layers: " << L << std::endl;
+    std::cout << "num params: " << model->num_params << std::endl;
+    std::cout << "current batch size: " << B << std::endl;
+    std::cout << "current sequence length: " << T << std::endl;
+    std::cout << "num activations: " << num_acts  << std::endl;
 
 }
 
@@ -182,9 +193,9 @@ void train(int max_batches){
     // create a node for softmax in
     Node* softmax_in = new Node();
     softmax_in->shape = {B, T, model->V};
-    softmax_in->size = B*T*model->V;
-    softmax_in->act = out->act - B*T*model->V;
-    softmax_in->act_grads = out->act_grads - B*T*model->V;
+    softmax_in->size = B*T*(model->V);
+    softmax_in->act = out->act - B*T*(model->V);
+    softmax_in->act_grads = out->act_grads - B*T*(model->V);
 
     // number of external activations used (exludes internal activates like m, rstd used in layernorm and buffers in attention)
     size_t num_acts = gpt2_num_acts(B, T, model->C, model->L, model->V);
@@ -204,13 +215,6 @@ void train(int max_batches){
 
         crossentropy_forward(loss, out, (ds->buffer) + 1); // compute loss
 
-        model->zero_grad(); // zero gradients of parameters
-        std::memset(in->act_grads, 0, sizeof(float)*num_acts); // set gradient of activations to zero.
-
-        crossentropy_softmax_backward(out, softmax_in, (ds->buffer) + 1, model->softmax->temperature); // do backward through crossentropy loss and softmax
-        model->backward(out, in);
-        model->update(t+1);
-
         float loss_val = 0.0f;
         for (size_t i = 0; i < B*T; i++){
             loss_val += loss->act[i];
@@ -218,6 +222,13 @@ void train(int max_batches){
         loss_val = loss_val / (B*T);
 
         std::cout << "iteration " << t << ": loss = " << loss_val << std::endl;
+
+        model->zero_grad(); // zero gradients of parameters
+        std::memset(in->act_grads, 0, sizeof(float)*num_acts); // set gradient of activations to zero.
+
+        crossentropy_softmax_backward(out, softmax_in, (ds->buffer) + 1, model->softmax->temperature); // do backward through crossentropy loss and softmax
+        model->backward(out, in);
+        model->update(t+1);
     }
 
 

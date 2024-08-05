@@ -2,6 +2,8 @@
 #include <random>
 #include <fstream>
 
+#include <iostream>
+
 
 
 /**
@@ -86,7 +88,7 @@ void crossentropy_softmax_backward(Node* out, Node* in, u_int16_t* targets, floa
 u_int16_t sample_token(float* probabilities, size_t length, bool random){
 
     // Check if probabilities are valid
-    float sum = 0.0;
+    float sum = 0.0f;
     for (int i = 0; i < length; i++) {
         if (probabilities[i] < 0.0) {
             throw std::invalid_argument("Probabilities must be non-negative");
@@ -94,11 +96,12 @@ u_int16_t sample_token(float* probabilities, size_t length, bool random){
         sum += probabilities[i];
     }
 
-    if (std::abs(sum - 1.0) > 1e-6) {
+    if (std::abs(sum - 1.0f) > 1e-3) {
+        std::cout << (sum - 1.0f) << "\n";
         throw std::invalid_argument("Probabilities must sum up to 1");
     }
 
-    int token;
+    u_int16_t token;
 
     if (random){
         static std::random_device rd;
@@ -110,12 +113,12 @@ u_int16_t sample_token(float* probabilities, size_t length, bool random){
 
     else {
         token = std::distance(probabilities, std::max_element(probabilities, probabilities + length));
-
     }
 
     return token;
     
 }
+
 
 /**
  * Loads weights from a file into a given buffer.

@@ -31,13 +31,6 @@ Tokenizer::Tokenizer(const std::string& filename){
     }
 
     file.close();
-
-    // // for debugging, can remove
-    // std::cout << "vocab size: " << token_map.size() << std::endl;
-    // std::cout << "First token: " << token_map[0] << std::endl;
-    // std::cout << "Second token: " << token_map[1] << std::endl;
-    // std::cout << "Last token: " << token_map[token_map.size()-1] << std::endl;
-
 }
 
 /**
@@ -78,7 +71,7 @@ std::string Tokenizer::decode(u_int16_t* tokenIDs, int length) {
 */ 
 std::string Tokenizer::decode(const std::vector<u_int16_t>& tokenIDs) {
 
-    std::string result;
+    std::string result("");
     for (size_t i = 0; i < tokenIDs.size(); i++) {
         u_int16_t key = tokenIDs[i];
         if (key < 0 || key >= token_map.size()){

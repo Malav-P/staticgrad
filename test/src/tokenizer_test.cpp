@@ -16,6 +16,10 @@ TEST_F(TokenizerTest, Constructor) {
 
     Tokenizer tk = Tokenizer(filename);
 
+    // for (int i = 50251; i < 50257; i++){
+    //     std::cout << tk.token_map[i] << std::endl;
+    // }
+
 }
 
 TEST_F(TokenizerTest, Decode) {
@@ -35,6 +39,25 @@ TEST_F(TokenizerTest, Decode) {
 
     decoded = tk.decode(tokenids);
     EXPECT_TRUE(decoded == "hello world");
+}
+
+TEST_F(TokenizerTest, eot) {
+
+    Tokenizer tk = Tokenizer(filename);
+
+    u_int16_t tokenIDs[1] = {50256};
+    int length = 1;
+
+    std::string decoded = tk.decode(tokenIDs, length);
+    std::string expected = "<|endoftext|>";
+
+    EXPECT_TRUE(decoded == expected);
+
+    // use std::vector container for tokens. this one is for the eot token
+    std::vector<u_int16_t> tokenids{50256};
+
+    decoded = tk.decode(tokenids);
+    EXPECT_TRUE(decoded == "<|endoftext|>");
 }
 
 TEST_F(TokenizerTest, Encode) {
@@ -71,7 +94,7 @@ TEST_F(TokenizerTest, EncodeDecodeTest) {
 
     std::vector<std::string> testStrings = {
         "hello world",
-        "this is a test",
+        "this is a test with puncuation. I want! to return the same string from the tokenizer",
         "tokenizer test",
         "", // Empty string
         "a", // Single character

@@ -5,6 +5,7 @@
 #include <Accelerate/Accelerate.h>
 
 
+
 /**
  * Shifts the pointer location for in and out activations/grad in order to process the next layer in gpt. Used for the forward pass
  *
@@ -250,6 +251,7 @@ TransformerBlock::TransformerBlock(float* params_, float* grad_, size_t C, size_
         res2 = new Add();
 }
 
+
 /**
  * @brief Performs a forward pass through the transformer block.
  *
@@ -288,7 +290,7 @@ void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
 
     // first matmul and bias
     shift(out_internal, in_internal, {B, T, 3*C});
-    mat1->forward2(out_internal, in_internal);
+    mat1->forward(out_internal, in_internal);
     ra1->forward(out_internal, out_internal); // in place
     
     // attention
@@ -297,15 +299,11 @@ void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
 
     // second matmul and bias
     shift(out_internal, in_internal, {B, T, C});
-    mat2->forward2(out_internal, in_internal);
+    mat2->forward(out_internal, in_internal);
     ra2->forward(out_internal, out_internal); // in place
-    
+
     // residual
     res1->forward(out_internal, res1_node); // in place
-
-    // second layer norm
-    shift(out_internal, in_internal, {B, T, C});
-    ln2->forward(out_internal, in_internal);
 
     // store activations for second residual
     res2_node->act = out_internal->act;
@@ -313,9 +311,13 @@ void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
     res2_node->shape = out_internal->shape;
     res2_node->size = out_internal->size;
 
+    // second layer norm
+    shift(out_internal, in_internal, {B, T, C});
+    ln2->forward(out_internal, in_internal);
+
     // third matmul and bias
     shift(out_internal, in_internal, {B, T, 4*C});
-    mat3->forward2(out_internal, in_internal); // (B, T, C) -> (B, T, 4*C)
+    mat3->forward(out_internal, in_internal); // (B, T, C) -> (B, T, 4*C)
     ra3->forward(out_internal, out_internal); // in place (B, T, 4*C) -> (B, T, 4*C)
 
     // GELU
@@ -324,11 +326,13 @@ void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
 
     // fourth matmul and bias
     shift(out_internal, in_internal, {B, T, C});
-    mat4->forward2(out_internal, in_internal);
+    mat4->forward(out_internal, in_internal);
     ra4->forward(out_internal, out_internal); // in place (B, T, 4C) -> (B, T, C)
+
 
     // second residual
     res2->forward(out_internal, res2_node); // in place (B, T, C) -> (B, T, C)
+
 
     // verify that results are in out Node
     if ((out_internal->act != out->act) || (out_internal->act_grads != out->act_grads) || (out_internal->size != out->size)){
@@ -373,7 +377,7 @@ void TransformerBlock::backward(Node* out, Node* in){
 
     // backward through fourth matmul and bias
     ra4->backward(out_internal, out_internal);
-    mat4->backward2(out_internal, in_internal);
+    mat4->backward(out_internal, in_internal);
 
     // backward through GELU
     shift_back(out_internal, in_internal, {B, T, 4*C}); // (B, T, 4*C) is input shape of GELU operation
@@ -382,7 +386,7 @@ void TransformerBlock::backward(Node* out, Node* in){
     // backward through third matmul and bias
     shift_back(out_internal, in_internal, {B, T, C}); // (B, T, C) is input shape of matmul operation
     ra3->backward(out_internal, out_internal);
-    mat3->backward2(out_internal, in_internal);
+    mat3->backward(out_internal, in_internal);
 
     // backward through second layernorm
     shift_back(out_internal, in_internal, {B, T, C}); // (B, T, C) is the input shape of layernorm operation
@@ -394,7 +398,7 @@ void TransformerBlock::backward(Node* out, Node* in){
 
     // backward through second matmul and bias
     ra2->backward(out_internal, out_internal);
-    mat2->backward2(out_internal, in_internal);
+    mat2->backward(out_internal, in_internal);
 
     // backward through attention
     shift_back(out_internal, in_internal, {B, T, 3*C}); // (B, T, 3*C) is input shape of attention
@@ -403,7 +407,7 @@ void TransformerBlock::backward(Node* out, Node* in){
     // backward through first matmul and bias
     shift_back(out_internal, in_internal, {B, T, C}); // (B, T, C) is input shape of matmul operatnion
     ra1->backward(out_internal, out_internal);
-    mat1->backward2(out_internal, in_internal);
+    mat1->backward(out_internal, in_internal);
 
     // backward through first layernorm
     shift_back(out_internal, in_internal, {B, T, C}); // (B, T, C) is input shape of layernorm
@@ -484,7 +488,7 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
                 float* q = in->act + b * T * 3*C + t * 3*C + h * head_size;
 
                 // get raw scores
-                float maxval = -9999999.0f;
+                float maxval = -FLT_MAX;
                 for (size_t t2 = 0; t2 <= t; t2++){
                     // get key vector for t2 token
                     float* k_t2 = in->act + b * T * 3*C + t2 * 3*C + C + h * head_size;
@@ -509,14 +513,14 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
                 float* post_softmax_bth = buffer + half_buffer_size + b*num_heads*lrint(T*(T+1)/2) + lrint(t*(t+1)/2)*num_heads + (t + 1)*h;
 
                 // normalize scores according to softmax
-                float exp_sum = 0;
+                float exp_sum = 0.0f;
                 for (size_t t2 = 0; t2 <= t; t2++){
                     float exp_score = expf(pre_softmax_bth[t2] - maxval);
                     post_softmax_bth[t2] = exp_score;
                     exp_sum += exp_score;
                 }
 
-                float exp_sum_inv = exp_sum == 0 ? 0.0f : 1 / exp_sum;
+                float exp_sum_inv = exp_sum == 0 ? 0.0f : 1.0f / exp_sum;
 
                 for (size_t t2 = 0; t2 <= t; t2++){
                     post_softmax_bth[t2] *= exp_sum_inv;
@@ -613,10 +617,6 @@ void Attention::backward(Node* out, Node* in) {
                         dpre_softmax[t2] += dpost_softmax[t3] * local_deriv; 
                     }
                     
-                    // for debugging, can remove
-                    // if (dpre_softmax[t2] == 0.0){
-                    //     std::cout << t << " " << t2 << " " << nh << " " << post_softmax[t2] << std::endl;
-                    // }
                 }
 
 
@@ -781,8 +781,8 @@ void LayerNorm::backward(Node* out, Node* in){
             float rstd_ = rstd[b*T + t];
 
             // first pass to store some useful values.
-            float norm_g_mean = 0;
-            float norm_g_mean_times_norm = 0;
+            float norm_g_mean = 0.0f;
+            float norm_g_mean_times_norm = 0.0f;
             for (size_t i = 0; i < C; i++){
                 float n = rstd_*(inp[i] - m_);
                 float dnorm = out_g[i] * w[i];
@@ -792,8 +792,8 @@ void LayerNorm::backward(Node* out, Node* in){
                 norm_g_mean_times_norm += dnorm * n;
             }
 
-            norm_g_mean = 1/C * norm_g_mean;
-            norm_g_mean_times_norm = 1/C * norm_g_mean_times_norm;
+            norm_g_mean = 1.0f/C * norm_g_mean;
+            norm_g_mean_times_norm = 1.0f/C * norm_g_mean_times_norm;
 
             for (size_t i = 0; i < C; i++){
                 // bias gradient
@@ -832,29 +832,35 @@ void Matmul::forward(Node* out, Node* in) {
     }
 
     size_t B = in->shape[0];
-    size_t T = in->shape[1],  C = in->shape[2];
-    size_t n = out->shape[2];
+    size_t T = in->shape[1];
+    size_t C = in->shape[2];
+    size_t OC = out->shape[2];
     
     float alpha = multiplier, beta = 0.0f;
     float* B_ = params;
 
-    // for debugging, can remove
-    // for (int i = 0; i < in->size; i++){
-    //     std::cout<< in->act[i] << "\n";
-    // }
-    // std::cout<< B << "," << T << "," << C << "\n";
+    int M = T; // rows of A and C
+    int N = OC; // columns of B and C
+    int K = C; // columns of A and rows of B
+
+    int lda = C; // leading dimension of A
+    int ldb = OC; // leading dimension of B
+    int ldc = OC; // leading dimension of C
 
 
     for (size_t b = 0; b < B; b++){
 
         float* A = in->act + b * T * C;
-        float* out_ = out->act + b * (T) * (n);
+        float* out_ = out->act + b * (T) * (OC);
 
         cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
-                    T, n, C, alpha, A, C, B_, n, beta, out_, n);
+                    M, N, K, alpha, A, lda, B_, ldb, beta, out_, ldc);
 
     }
 }
+
+
+
 
 /**
  * Computes the forward pass of matrix multiplication assuming the weights are given tranposed.
@@ -996,6 +1002,14 @@ void Add::forward(Node* out, Node* in){
 
 void Add::backward(Node* out, Node* in){
 
+    if (out->act == nullptr || in->act == nullptr){
+        throw std::invalid_argument("pointer to data is null");
+    }
+
+    if (out->size != in->size){
+        throw std::invalid_argument("sizes of input and output arrays unequal");
+    }
+
     size_t numel = in->size;
 
     for (size_t i = 0; i < numel ; i++){
@@ -1011,7 +1025,6 @@ void RowAdd::forward(Node* out, Node* in){
     size_t T = in->shape[1];
     size_t C = in->shape[2];
 
-    float* inp1 = params;
 
     for (size_t b = 0; b < B; b++){
 
@@ -1020,7 +1033,7 @@ void RowAdd::forward(Node* out, Node* in){
 
         for (size_t t = 0; t < T; t++){
             for (size_t c = 0; c < C; c++){
-                out_[t*C + c] = inp0[t*C + c] + inp1[c];
+                out_[t*C + c] = inp0[t*C + c] + params[c];
             }
         }
     }
@@ -1062,7 +1075,7 @@ void Softmax::forward(Node* out, Node* in){
             float* out_bt_arr = out->act + b * T * V + t * V;
 
             // first pass to get maxval for numerical stability
-            float maxval = -99999.9f;
+            float maxval = -FLT_MAX;
             float val = 0.0f;
             for (size_t v = 0; v < V; v++){
                 val = bt_arr[v];
@@ -1070,12 +1083,13 @@ void Softmax::forward(Node* out, Node* in){
                     maxval = val;
                 }
             }
+            // std::cout << maxval << std::endl;
 
             // second pass to compute exponentials
             float exp_sum = 0.0f;
             float exp_val = 0.0f;
             for (size_t v = 0; v < V; v++){
-                exp_val = expf((bt_arr[v] - maxval)/temperature);
+                exp_val = std::expf((bt_arr[v] - maxval)/temperature);
                 out_bt_arr[v] = exp_val;
                 exp_sum += exp_val;
             }

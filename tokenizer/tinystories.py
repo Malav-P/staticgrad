@@ -75,9 +75,6 @@ def tokenize_tinystories():
         tokens.tofile(output_path)
 
 
-
-
-
 def process_file(file_path):
     tokens = []
     if file_path.endswith('.json'):

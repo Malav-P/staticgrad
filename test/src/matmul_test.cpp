@@ -75,6 +75,12 @@ TEST_F(MatmulTest, Forward) {
         EXPECT_NEAR(out->act[i], expected_out[i], 1e-5);
    }
 
+   matmul->forward3(out, in);
+
+   for (size_t i = 0; i < out->size; i++) {
+        EXPECT_NEAR(out->act[i], expected_out[i], 1e-5);
+   }
+
    delete[] expected_out;
    delete matmul;
 

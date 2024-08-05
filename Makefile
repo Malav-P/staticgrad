@@ -1,8 +1,8 @@
 # Compiler (g++ or clang++ both work)
-CC = g++
+CC = clang++
 
 # Compiler flags
-CXXFLAGS := -Wextra -std=c++14 -fPIC -framework Accelerate -DACCELERATE_NEW_LAPACK -Wall
+CXXFLAGS := -g -Wextra -std=c++14 -fPIC -framework Accelerate -DACCELERATE_NEW_LAPACK -Wall
 
 # Directory locations
 SRCDIR := StaticGrad/src
@@ -39,8 +39,8 @@ INCLUDE_DIRS = -I/opt/homebrew/include/ -I./StaticGrad/include/ -I ${TEST_INCDIR
 # Binary directory
 BIN_DIR = test/bin
 
-# Source files
-SOURCES = $(SRC_BUILD_DIR)/classes.o $(TEST_BUILD_DIR)/test_common.o
+# Source files for common test code
+TEST_COMMON = $(TEST_BUILD_DIR)/test_common.o
 
 # List of Tests
 TESTS = att add layernorm matmul softmax encoder transformerblock gpt2 utils datastream tokenizer interface train
@@ -66,7 +66,7 @@ ${TEST_BUILD_DIR}/%.o: ${TEST_SRCDIR}/%.cpp
 
 # Clean rule
 clean:
-	rm -f ${SRC_BUILD_DIR}/*.o ${LIBNAME} ${TEST_BUILD_DIR}/*.o
+	rm -f ${LIBNAME} ${SRC_BUILD_DIR}/*.o ${TEST_BUILD_DIR}/*.o
 	rm -f $(BIN_DIR)/*
 	clear
 
@@ -79,40 +79,43 @@ run: test
 test: $(TESTS)
 
 
-att: $(TEST_BUILD_DIR)/att_test.o $(SOURCES)
+att: $(TEST_BUILD_DIR)/att_test.o $(LIBNAME) $(TEST_COMMON)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/$@ $^ $(LIBS) $(LIB_DIRS)
 
-add: $(TEST_BUILD_DIR)/add_test.o $(SOURCES)
+add: $(TEST_BUILD_DIR)/add_test.o $(LIBNAME) $(TEST_COMMON)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/$@ $^ $(LIBS) $(LIB_DIRS)
 
-layernorm: $(TEST_BUILD_DIR)/layernorm_test.o $(SOURCES)
+layernorm: $(TEST_BUILD_DIR)/layernorm_test.o $(LIBNAME) $(TEST_COMMON)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/$@ $^ $(LIBS) $(LIB_DIRS)
 
-matmul: $(TEST_BUILD_DIR)/matmul_test.o $(SOURCES)
+matmul: $(TEST_BUILD_DIR)/matmul_test.o $(LIBNAME) $(TEST_COMMON)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/$@ $^ $(LIBS) $(LIB_DIRS)
 
-softmax: $(TEST_BUILD_DIR)/softmax_test.o $(SOURCES)
+softmax: $(TEST_BUILD_DIR)/softmax_test.o $(LIBNAME) $(TEST_COMMON)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/$@ $^ $(LIBS) $(LIB_DIRS)
 
-encoder: $(TEST_BUILD_DIR)/encoder_test.o $(SOURCES)
+encoder: $(TEST_BUILD_DIR)/encoder_test.o $(LIBNAME) $(TEST_COMMON)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/$@ $^ $(LIBS) $(LIB_DIRS)
 
-transformerblock: $(TEST_BUILD_DIR)/transformerblock_test.o $(SOURCES)
+transformerblock: $(TEST_BUILD_DIR)/transformerblock_test.o $(LIBNAME) $(TEST_COMMON)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/$@ $^ $(LIBS) $(LIB_DIRS)
 
-gpt2: $(TEST_BUILD_DIR)/gpt2_test.o $(SRC_BUILD_DIR)/gpt2.o $(SOURCES)
+gpt2: $(TEST_BUILD_DIR)/gpt2_test.o $(LIBNAME) $(TEST_COMMON)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/$@ $^ $(LIBS) $(LIB_DIRS)
 
-utils: $(TEST_BUILD_DIR)/utils_test.o $(SRC_BUILD_DIR)/utils.o $(SOURCES)
+utils: $(TEST_BUILD_DIR)/utils_test.o $(LIBNAME) $(TEST_COMMON)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/$@ $^ $(LIBS) $(LIB_DIRS)
 
-datastream: $(TEST_BUILD_DIR)/datastream_test.o $(SRC_BUILD_DIR)/datastream.o
+datastream: $(TEST_BUILD_DIR)/datastream_test.o $(LIBNAME)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/$@ $^ $(LIBS) $(LIB_DIRS)
 
-tokenizer: $(TEST_BUILD_DIR)/tokenizer_test.o $(SRC_BUILD_DIR)/tokenizer.o
+tokenizer: $(TEST_BUILD_DIR)/tokenizer_test.o $(LIBNAME)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/$@ $^ $(LIBS) $(LIB_DIRS)
 
-interface: $(TEST_BUILD_DIR)/interface_test.o $(SRC_BUILD_DIR)/interface.o $(SRC_BUILD_DIR)/gpt2.o $(SRC_BUILD_DIR)/datastream.o $(SRC_BUILD_DIR)/tokenizer.o $(SRC_BUILD_DIR)/utils.o $(SOURCES)
+interface: $(TEST_BUILD_DIR)/interface_test.o $(LIBNAME) $(TEST_COMMON)
+	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/$@ $^ $(LIBS) $(LIB_DIRS)
+
+inference: $(TEST_BUILD_DIR)/inference_test.o $(LIBNAME) 
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/$@ $^ $(LIBS) $(LIB_DIRS)
 
 train: $(TEST_BUILD_DIR)/train_test.o $(LIBNAME)
