@@ -10,31 +10,21 @@ class UtilsTest : public ::testing::Test {
     V = 10;
 
     in = new Node();
-    in->act = new float[B * T * V];
-    in->act_grads = new float[B * T * V];
-    in->shape = {B, T, V};
-    in->size = B * T * V;
+    setup_node(in, {B, T, V});
 
     out = new Node();
-    out->act = new float[B * T * V];
-    out->act_grads = new float[B * T * V];
-    out->shape = {B, T, V};
-    out->size = B * T * V;
+    setup_node(out, {B, T, V});
   }
 
   void TearDown() override {
-    delete[] in->act;
-    delete[] in->act_grads;
-    delete in;
-
-    delete[] out->act;
-    delete[] out->act_grads;
-    delete out;
+    teardown_node(out);
+    teardown_node(in);
   }
 
   size_t B;
   size_t T;
   size_t V;
+  
   Node* in;
   Node* out;
 };
@@ -94,7 +84,7 @@ TEST_F(UtilsTest, InvalidInputTest) {
 
 TEST_F(UtilsTest, InvalidSum) {
     float probabilities[] = {0.1, 0.2, 0.3, 0.3};
-    size_t length = sizeof(probabilities) / sizeof(probabilities[0]);
+    size_t length = 4;
 
     // Check that the function throws an exception when given invalid input
     EXPECT_THROW(sample_token(probabilities, length), std::invalid_argument);

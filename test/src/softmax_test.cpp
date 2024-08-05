@@ -10,27 +10,21 @@ class SoftmaxTest : public ::testing::Test {
 			V = 4;
 
 			in = new Node();
-			in->act = new float[B * T * V];
-			in->shape = {B, T, V};
-			in->size = B * T * V;
+			setup_node(in, {B, T, V});
 
 			out = new Node();
-			out->act = new float[B*T*V];
-			out->shape = {B, T, V};
-			out->size = B * T * V;
+			setup_node(out, {B, T, V});
 		}
 
 		void TearDown() override {
-			delete[] in->act;
-			delete in;
-
-			delete[] out->act;
-			delete out;
+			teardown_node(out);
+			teardown_node(in);
 		}
 
 		size_t B;
 		size_t T;
 		size_t V;
+		
 		Node* in;
 		Node* out;
 };

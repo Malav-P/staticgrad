@@ -1,4 +1,5 @@
 #include "test_common.hpp"
+#include "node.hpp"
 #include <random>
 
 void fillArrayWithRandom(float* arr, int size) {
@@ -11,4 +12,32 @@ void fillArrayWithOnes(float* arr, int size) {
   for (int i = 0; i < size; i++) {
     arr[i] = 1.0; // Assigning each element the value 1
   }
+}
+
+void setup_node(Node* node, std::vector<size_t> shape_){
+    size_t B = shape_[0];
+    size_t T = shape_[1];
+    size_t C = shape_[2];
+
+    size_t numel = 1;
+
+    for (size_t element : shape_){
+      numel *= element;
+    }
+
+    // Set up the output node with shape (1, 3, 1)
+    delete[] node->act;
+    delete[] node->act_grads;
+    node->act = new float[numel];
+    node->act_grads = new float[numel];
+    node->shape = shape_;
+    node->size = numel;
+}
+
+void teardown_node(Node* node){
+      delete[] node->act;
+      delete[] node->act_grads;
+      delete node;
+
+      node = nullptr;
 }

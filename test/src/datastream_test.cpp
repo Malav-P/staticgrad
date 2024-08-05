@@ -22,14 +22,10 @@ class DataStreamTest : public ::testing::Test {
  * that the object is initialized with a non-null stream pointer.
  */
 TEST_F(DataStreamTest, createDataStream) {
-
-
     EXPECT_TRUE(ds->stream != nullptr);
 
     EXPECT_TRUE(ds != nullptr);
     EXPECT_TRUE(ds->stream->is_open() == false);
-
-
 }
 
 /**

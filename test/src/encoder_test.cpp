@@ -11,32 +11,23 @@ class EncoderTest : public ::testing::Test {
             C = 2;
 
 			in = new Node();
-			in->act = new float[B * T];
-			in->act_grads = new float[B * T];
-			in->shape = {B, T};
-			in->size = B * T;
+			setup_node(in, {B, T});
 
 			out = new Node();
-			out->act = new float[B*T*C];
-			out->act_grads = new float[B*T*C];
-			out->shape = {B, T, C};
-			out->size = B * T * C;
+			setup_node(out, {B, T, C});
 		}
 
 		void TearDown() override {
-			delete[] in->act;
-			delete[] in->act_grads;
-			delete in;
-
-			delete[] out->act;
-			delete[] out->act_grads;
-			delete out;
+			teardown_node(out);
+			teardown_node(in);
 		}
 
 		size_t B;
 		size_t T;
-		size_t vocab_size;
         size_t C;
+
+		size_t vocab_size;
+		
 		Node* in;
 		Node* out;
 };

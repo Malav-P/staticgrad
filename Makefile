@@ -120,4 +120,3 @@ inference: $(TEST_BUILD_DIR)/inference_test.o $(LIBNAME)
 
 train: $(TEST_BUILD_DIR)/train_test.o $(LIBNAME)
 	$(CC) $(CXXFLAGS) -o $(BIN_DIR)/$@ $^ $(LIBS) $(LIB_DIRS) 
-

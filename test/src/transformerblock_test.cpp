@@ -48,8 +48,10 @@ class TransformerBlockTest : public ::testing::Test {
 	size_t T;
 	size_t C;
 	size_t maxT;
+
 	Node* in;
 	Node* out;
+	
 	float* activations;
 	float* activations_grad;
 	float* params;

@@ -2,28 +2,6 @@
 #include "classes.hpp"
 #include "test_common.hpp"
 
-void setup_nodes(Node* out, Node* in, std::vector<size_t> shape_){
-    size_t B = shape_[0];
-    size_t T = shape_[1];
-    size_t C = shape_[2];
-
-    // Set up the input node with shape (1, 3, 3)
-    delete[] in->act;
-	delete[] in->act_grads;
-	in->act = new float[B*T*3*C];
-	in->act_grads = new float[B*T*3*C];
-	in->shape = {B, T, 3*C};
-	in->size = B*T*3*C;
-
-    // Set up the output node with shape (1, 3, 1)
-    delete[] out->act;
-	delete[] out->act_grads;
-	out->act = new float[B*T*C];
-	out->act_grads = new float[B*T*C];
-	out->shape = {B, T, C};
-	out->size = B*T*C;
-}
-
 
 class AttentionTest : public ::testing::Test {
  protected:
@@ -36,25 +14,25 @@ class AttentionTest : public ::testing::Test {
 
 
     in = new Node();
-    out = new Node();
+    setup_node(in, {B, T, 3*C});
 
-    setup_nodes(out, in, {B, T, C});
+    out = new Node();
+    setup_node(out, {B, T, C});
+
   }
 
   void TearDown() override {
-    // Common teardown code here
-    delete[] in->act;
-    delete[] in->act_grads;
-    delete in;
-
-    delete[] out->act;
-    delete[] out->act_grads;
-    delete out;
+    teardown_node(out);
+    teardown_node(in);
   }
 
-  size_t B; size_t T; size_t C;
+  size_t B;
+  size_t T;
+  size_t C;
   size_t maxT;
-  Node* in; Node* out;
+
+  Node* in;
+  Node* out;
 };
 
 TEST_F(AttentionTest, Forward) {
@@ -193,7 +171,8 @@ TEST_F(AttentionTest, Backward2){
 	T = 3;
 	C = 3;
 
-    setup_nodes(out, in, {B, T, C});
+    setup_node(out, {B, T, C});
+    setup_node(in, {B, T, 3*C});
 
     // Fill the query, key, and value vectors with easy-to-check values
     // Query vector: [1, 2, 3], [4, 5, 6], [7, 8, 9]

@@ -97,7 +97,6 @@ u_int16_t sample_token(float* probabilities, size_t length, bool random){
     }
 
     if (std::abs(sum - 1.0f) > 1e-3) {
-        std::cout << (sum - 1.0f) << "\n";
         throw std::invalid_argument("Probabilities must sum up to 1");
     }
 

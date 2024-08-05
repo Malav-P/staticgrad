@@ -1,12 +1,16 @@
 #ifndef TEST_COMMON_HPP
 #define TEST_COMMON_HPP
 
-#include <Accelerate/Accelerate.h>
-#include <fstream>
+#include <vector>
+class Node;
+
 
 
 void fillArrayWithRandom(float* arr, int size);
 void fillArrayWithOnes(float* arr, int size);
+
+void setup_node(Node* node, std::vector<size_t> shape_);
+void teardown_node(Node* node);
 
 
 

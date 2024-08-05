@@ -16,10 +16,6 @@ TEST_F(TokenizerTest, Constructor) {
 
     Tokenizer tk = Tokenizer(filename);
 
-    // for (int i = 50251; i < 50257; i++){
-    //     std::cout << tk.token_map[i] << std::endl;
-    // }
-
 }
 
 TEST_F(TokenizerTest, Decode) {

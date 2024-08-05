@@ -11,26 +11,16 @@ class AddTest : public ::testing::Test {
     C = 768;
 
     in = new Node();
-    in->act = new float[B * T * C];
-    in->act_grads = new float[B * T * C];
-    in->shape = {B, T, C};
-    in->size = B * T * C;
+    setup_node(in, {B, T, C});
 
     out = new Node();
-    out->act = new float[B*T*C];
-    out->act_grads = new float[B*T*C];
-    out->shape = {B, T, C};
-    out->size = B * T * C;
+    setup_node(out, {B, T, C});
+
   }
 
   void TearDown() override {
-    delete[] in->act;
-    delete[] in->act_grads;
-    delete in;
-
-    delete[] out->act;
-    delete[] out->act_grads;
-    delete out;
+    teardown_node(in);
+    teardown_node(out);
   }
 
   size_t B;

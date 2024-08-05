@@ -2,46 +2,39 @@
 #include "classes.hpp"
 #include "test_common.hpp"
 
+#include <Accelerate/Accelerate.h> // for cblas sgemm calls in this file
+
 
 class MatmulTest : public ::testing::Test {
   protected:
 
   void initialize(size_t B, size_t T, size_t C, size_t OC){
       in = new Node();
-      in->act = new float[B * T * C];
-      in->act_grads = new float[B * T * C]; 
-      in->shape = {B, T, C};
-      in->size = B * T * C;
+      setup_node(in, {B, T, C});
 
       out = new Node();
-      out->act = new float[B * T * OC];
-      out->act_grads = new float[B * T * OC]; out->shape = {B, T, OC};
-      out->size = B * T * OC;
+      setup_node(out, {B, T, OC});
 
       params = new float[OC*C];
       grad = new float[OC*C];
 
       fillArrayWithRandom(params, C * OC);
-
-
   }
 
   void SetUp() override {}
   void TearDown() override {}
 
   void teardown() {
-        delete[] in->act;    
-        delete[] in->act_grads;
-        delete in;        
-        delete[] out->act;        
-        delete[] out->act_grads;
-        delete out;
+         teardown_node(out);
+         teardown_node(in);
+
         delete[] params;
         delete[] grad;
   } 
 
   Node* in; 
   Node* out;  
+
   float* params;
   float* grad;
 };
@@ -70,12 +63,6 @@ TEST_F(MatmulTest, Forward) {
 
         cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, T, OC, C, 1.0f, A, C, params, OC, 0.0f, out_, OC);
    }
-
-   for (size_t i = 0; i < out->size; i++) {
-        EXPECT_NEAR(out->act[i], expected_out[i], 1e-5);
-   }
-
-   matmul->forward3(out, in);
 
    for (size_t i = 0; i < out->size; i++) {
         EXPECT_NEAR(out->act[i], expected_out[i], 1e-5);

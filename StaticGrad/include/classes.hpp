@@ -4,24 +4,8 @@
 #include <vector>
 
 
-class Node {
-    public:
+#include "node.hpp"
 
-        float* act;
-        float* act_grads;
-
-        std::vector<size_t> shape;
-        size_t size; // number of elements
-
-
-        Node():
-            act(nullptr),
-            act_grads(nullptr),
-            shape({0}),
-            size(0){}
-
-        ~Node(){}
-};
 
 void shift(Node* out, Node* in, std::vector<size_t> shape_);
 void shift_back(Node* out, Node* in, std::vector<size_t> shape_);
