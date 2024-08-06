@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "interface.hpp"
 #include "test_common.hpp"
+#include "node.hpp"
 
 class SetupTeardownTest : public ::testing::Test {
 	protected:
@@ -15,8 +16,8 @@ TEST_F(SetupTeardownTest, NoMemoryLeaks) {
     GPT2* model = nullptr;
     DataStream* ds = nullptr;
     Tokenizer* tk = nullptr;
-    Node* out = nullptr;
-    Node* in = nullptr;
+    Node* out = new Node();
+    Node* in = new Node();
 
     size_t B = 1; // batch size
     size_t T = 1; // sequence length
@@ -25,11 +26,15 @@ TEST_F(SetupTeardownTest, NoMemoryLeaks) {
     size_t V = 50257;
 
     setup(model, ds, tk);
-    allocate_activations(out, in, B, T, C, L, V);
+    Activation* activations = new Activation(B, T, C, L, V);
+    activations->point_Nodes(out, in);
     EXPECT_NE(model, nullptr);
 
     tear_down(model, ds, tk);
-    deallocate_activations(out, in);
+    delete activations;
+    delete out;
+    delete in;
+    
     EXPECT_EQ(model, nullptr);
 
 }

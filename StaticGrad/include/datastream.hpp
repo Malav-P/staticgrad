@@ -16,6 +16,13 @@ class DataStream {
             buffer(nullptr),
             buffersize(0)
             {}
+        DataStream(const std::string& filepath):
+            stream(new std::fstream),
+            buffer(nullptr),
+            buffersize(0)
+            {
+                this->open(filepath);
+            }
 
         void init_buffer(int num_tokens);
 

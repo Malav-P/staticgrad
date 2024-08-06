@@ -13,13 +13,29 @@ class Node {
         size_t size; // number of elements
 
 
-        Node():
-            act(nullptr),
-            act_grads(nullptr),
-            shape({0}),
-            size(0){}
-
+        Node();
         ~Node(){}
+
+};
+
+class Activation {
+    public:
+
+        float* act;
+        float* act_grads;
+
+        size_t size; // number of elements
+        size_t B; // current batch size
+        size_t T; // current sequence length
+        size_t V; // vocab size
+
+        Activation(size_t B_, size_t T_, size_t C_, size_t L_, size_t V_);
+        ~Activation();
+
+        void zero_grad();
+        void point_Nodes(Node* in, Node* out);
+
+        
 };
 
 #endif // NODE_HPP

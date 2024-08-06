@@ -8,30 +8,29 @@ int main(int argc, char **argv) {
     GPT2* model = nullptr;
     DataStream* ds = nullptr;
     Tokenizer* tk = nullptr;
-    Node* out = nullptr;
-    Node* in = nullptr;
-
+    Node* out = new Node();
+    Node* in = new Node();
     size_t B = 1;
     size_t T = 64;
-
     std::string start;
 
     if (argc == 2){
         start = std::string(argv[1]);
     }
-
     else {
         start = "This is the default start string";
     }
 
     bool pretrained = true;
-
     setup(model, ds, tk, pretrained);
-    allocate_activations(out, in, B, T, model->C, model->L, model->V);
+    auto activations = new Activation(B, T, model->C, model->L, model->V);
+    activations->point_Nodes(out, in);
 
     yap(model, tk, out, in, start);
 
-    deallocate_activations(out, in);
+    delete activations;
     tear_down(model, ds, tk);
+    delete out;
+    delete in;
 
 }
