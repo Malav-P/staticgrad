@@ -1,7 +1,6 @@
 #include "utils.hpp"
 #include <random>
 #include <fstream>
-
 #include <iostream>
 
 
@@ -116,45 +115,4 @@ u_int16_t sample_token(float* probabilities, size_t length, bool random){
 
     return token;
     
-}
-
-
-/**
- * Loads weights from a file into a given buffer.
- *
- * Args:
- *   @param dest: A pointer to the buffer where the weights will be stored.
- *   @param fname: The name of the file containing the weights.
- *   @param expected_bytes: The expected number of bytes in the file, or -1 if unknown.
- *
- * Returns:
- *   None.
- *
- * Throws:
- *   std::runtime_error if the file cannot be opened, the number of bytes in the file does not match the expected number, or an error occurs while reading the file.
- */
-void load_weights(float* dest, const std::string& fname, int expected_bytes){
-
-    // Open the file in binary mode
-    std::ifstream inputFile(fname, std::ios::binary);
-
-    if (!inputFile.is_open()){
-        throw std::runtime_error("could not open file");
-    }
-
-    // Get the size of the file
-    inputFile.seekg(0, std::ios::end);
-    std::streamsize fileSize = inputFile.tellg();
-    inputFile.seekg(0, std::ios::beg);
-
-    if (expected_bytes != -1){
-        if (expected_bytes != fileSize){
-            throw std::runtime_error("number of bytes in file does not match expected");
-        }
-    }
-
-    // Read the contents of the file into the buffer
-    if (!inputFile.read(reinterpret_cast<char*>(dest), fileSize)) {
-        throw std::runtime_error("error loading contents into buffer");
-    }
 }

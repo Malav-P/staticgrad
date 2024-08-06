@@ -13,6 +13,7 @@ u_int16_t next_token(GPT2*& model,
                      Node*& in,
                      size_t t);
 
+
 void yap(GPT2*& model,
          Tokenizer*& tk,
          Node*& out,

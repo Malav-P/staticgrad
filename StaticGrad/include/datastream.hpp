@@ -1,7 +1,7 @@
 #ifndef DATASTREAM_HPP
 #define DATASTREAM_HPP
 
-#include "./classes.hpp"
+#include "node.hpp"
 #include <fstream>
 
 class DataStream {

@@ -5,8 +5,43 @@
 #include "utils.hpp"
 
 
+void allocate_activations(Node*& out,
+                          Node*& in,
+                          size_t B,
+                          size_t T,
+                          size_t C,
+                          size_t L,
+                          size_t V){
 
+    size_t num_acts = gpt2_num_acts(B, T, C, L, V);
 
+    float* acts = new float[num_acts];
+    float* grad = new float[num_acts];
+
+    in = new Node();
+    in->act = acts;
+    in->act_grads = grad;
+    in->shape = {B, T};
+    in->size = B*T;
+
+    out = new Node();
+    out->act = acts + num_acts - B*T*V;
+    out->act_grads = grad + num_acts - B*T*V;
+    out->shape = {B, T, V};
+    out->size = B*T*V;
+}
+
+void deallocate_activations(Node*& out,
+                            Node*& in)
+{
+    delete[] in->act;
+    delete[] in->act_grads;
+    delete in;
+    in = nullptr;
+
+    delete out;
+    out = nullptr;
+}
 
 /**
 * Allocates and initializes the GPT-2 model, data stream, tokenizer, and nodes for a specified batch size and sequence length.
@@ -34,10 +69,6 @@
 void setup(GPT2*& model,
            DataStream*& ds,
            Tokenizer*& tk,
-           Node*& out, 
-           Node*& in,
-           size_t B, // batch size
-           size_t T, // sequence length
            bool pretrained) 
 {
     
@@ -53,13 +84,6 @@ void setup(GPT2*& model,
         throw std::invalid_argument("tokenizer must be empty (nullptr)");
     }
 
-    if (out != nullptr){
-        throw std::invalid_argument("out node must be empty (nullptr)");
-    }
-
-    if (in != nullptr){
-        throw std::invalid_argument("in node must be empty (nullptr)");
-    }
 
     size_t C = 768; // embedding dimension
     size_t L = 12; // number of transformer blocks
@@ -70,38 +94,20 @@ void setup(GPT2*& model,
     model = new GPT2(C, L, V, maxT, NH);
 
     if (pretrained){
-        int expected_bytes = sizeof(float) * 124439808;
-        std::string weights_file = "/Users/malavpatel/Coding_Projects/StaticGrad/models/gpt2_weights.bin";
-        load_weights(model->params, weights_file, expected_bytes);
+        std::string weights_file = "/Users/malavpatel/Coding_Projects/StaticGrad/gpt2_python/bin/gpt2_weights.bin";
+        model->load_weights(weights_file);
 
         // The gpt2.bin file represents weight token embedding matrix as shape (V, C). In this code, we assume the weight token embedding matrix
         // also has shape (V, C)
     }
 
-    std::string fp_ds = "/Users/malavpatel/Coding_Projects/StaticGrad/tokenizer/tokens/tinyshakespeare.bin";
+    std::string fp_ds = "/Users/malavpatel/Coding_Projects/StaticGrad/gpt2_python/bin/tinyshakespeare.bin";
     ds = new DataStream();
     ds->open(fp_ds);
-    ds->init_buffer(B*T + 1); // +1 to include necessary target tokens for training
 
-    std::string fp_tk = "/Users/malavpatel/Coding_Projects/StaticGrad/tokenizer/gpt2_vocab.bin";
+    std::string fp_tk = "/Users/malavpatel/Coding_Projects/StaticGrad/gpt2_python/bin/gpt2_vocab.bin";
     tk = new Tokenizer(fp_tk);
 
-    size_t num_acts = gpt2_num_acts(B, T, C, L, V);
-
-    float* acts = new float[num_acts];
-    float* grad = new float[num_acts];
-
-    in = new Node();
-    in->act = acts;
-    in->act_grads = grad;
-    in->shape = {B, T};
-    in->size = B*T;
-
-    out = new Node();
-    out->act = acts + num_acts - B*T*V;
-    out->act_grads = grad + num_acts - B*T*V;
-    out->shape = {B, T, V};
-    out->size = B*T*V;
 
     // + L*2*B*T + L*NH*B*T*(T+1) + 2*B*T
 
@@ -112,9 +118,9 @@ void setup(GPT2*& model,
     std::cout << "vocab size: " << V << std::endl;
     std::cout << "num layers: " << L << std::endl;
     std::cout << "num params: " << model->num_params << std::endl;
-    std::cout << "current batch size: " << B << std::endl;
-    std::cout << "current sequence length: " << T << std::endl;
-    std::cout << "num activations: " << num_acts  << std::endl;
+    // std::cout << "current batch size: " << B << std::endl;
+    // std::cout << "current sequence length: " << T << std::endl;
+    // std::cout << "num activations: " << num_acts  << std::endl;
 
 }
 
@@ -134,9 +140,7 @@ void setup(GPT2*& model,
 */
 void tear_down(GPT2*& model,
                DataStream*& ds,
-               Tokenizer*& tk,
-               Node*& out, 
-               Node*& in)
+               Tokenizer*& tk)
 {
     delete model;
     model = nullptr;
@@ -146,14 +150,6 @@ void tear_down(GPT2*& model,
 
     delete tk;
     tk = nullptr;
-
-    delete[] in->act;
-    delete[] in->act_grads;
-    delete in;
-    in = nullptr;
-
-    delete out;
-    out = nullptr;
 
     std::cout << "\nteardown complete, memory deallocated" << std::endl;
 }
@@ -179,9 +175,10 @@ void train(int max_batches){
     size_t T = 64;
 
     bool pretrained = true;
+    setup(model, ds, tk, pretrained);
+    allocate_activations(out, in, B, T, model->C, model->L, model->V);
 
-    setup(model, ds, tk, out, in, B, T, pretrained);
-
+    ds->init_buffer(B*T + 1); // +1 to include necessary target tokens for training
 
     // create node for storing losses.
     Node* loss = new Node();
@@ -197,17 +194,11 @@ void train(int max_batches){
     softmax_in->act = out->act - B*T*(model->V);
     softmax_in->act_grads = out->act_grads - B*T*(model->V);
 
-    // number of external activations used (exludes internal activates like m, rstd used in layernorm and buffers in attention)
     size_t num_acts = gpt2_num_acts(B, T, model->C, model->L, model->V);
 
     // begin training
     for (int t = 0; t < max_batches; t++){
         ds->load_buffer(); // loads B*T + 1 tokens
-
-        // std::string first_str = tk->decode(ds->buffer, T);
-        // std::string first_tar = tk->decode((ds->buffer) + 1, T);
-        // std::cout << "FIRST SEQUENCE: " << first_str << std::endl;
-        // std::cout << "FIRST TARGETS: " << first_tar << std::endl;
 
         ds->buffer_to_Node(in, B*T); // transfer first B*T tokens from buffer to in node
 
@@ -238,7 +229,8 @@ void train(int max_batches){
 
     delete softmax_in;
 
-    tear_down(model, ds, tk, out, in);
+    deallocate_activations(out, in);
+    tear_down(model, ds, tk);
 }
 
 

@@ -22,7 +22,9 @@ u_int16_t next_token(GPT2*& model,
                      Node*& in,
                      size_t t){
 
-    // ENSURE THAT t is NEVER ZERO, OTHERWISE UNDERFLOW ERROR WILL OCCUR
+    if (t == 0){
+        throw std::runtime_error("t cannot be zero");
+    }
 
     size_t B = out->shape[0];
     size_t T = out->shape[1];
@@ -38,7 +40,6 @@ u_int16_t next_token(GPT2*& model,
     u_int16_t next_tok = sample_token(probabilities, V, true);
 
     return next_tok;
-
 }
 
 void yap(GPT2*& model,
@@ -46,17 +47,6 @@ void yap(GPT2*& model,
          Node*& out,
          Node*& in,
          std::string start){
-
-    // IF STRING == "" then fill in node with EOT TOKENS
-        // t = 1 for next_token call
-
-    // ELSE 
-        // DECODE STRINGS INTO TOKEN VECTOR AND PLACE INTO BUFFER
-        // decide variable t for next_token call
-
-
-    // AUTOGENERATE TOKENS UNTIL t = T (i.e. we guess the Tth token, counting starts at 0 inclusive)
-
 
     // maybe check / assert B = 1
 
@@ -104,6 +94,4 @@ void yap(GPT2*& model,
 
         decoded_tokens += next_tok_dec;
     }
-
-
 }

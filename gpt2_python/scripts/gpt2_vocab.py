@@ -7,7 +7,8 @@ eot_token = encoder._special_tokens['<|endoftext|>']
 
 def write_gpt2_vocab():
 
-    output_path = os.path.join(os.path.dirname(__file__), "gpt2_vocab.bin")
+    parent_dir = os.path.dirname(os.path.dirname(__file__))
+    output_path = os.path.join(parent_dir, "bin/gpt2_vocab.bin")
 
     # Check if the output path is a valid directory
     if not os.path.isdir(os.path.dirname(output_path)):

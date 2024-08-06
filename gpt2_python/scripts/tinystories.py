@@ -71,7 +71,8 @@ def tokenize_tinystories():
         print("writing to bin file...")
         tokens = np.array(tokens, dtype=np.uint16)
 
-        output_path = os.path.join(os.path.dirname(__file__), "tokens/tinystories.bin")
+        parent_dir = os.path.dirname(os.path.dirname(__file__))
+        output_path = os.path.join(parent_dir, "bin/tinystories.bin")
         tokens.tofile(output_path)
 
 

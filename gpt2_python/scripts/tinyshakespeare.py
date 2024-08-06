@@ -47,7 +47,8 @@ def tokenize_tinyshakespeare(tokenizer = "tiktoken"):
 
         tokens = np.array(tokens, dtype=np.uint16)[32768:]
 
-        output_path = os.path.join(os.path.dirname(__file__), "tokens/tinyshakespeare.bin")
+        parent_dir = os.path.dirname(os.path.dirname(__file__))
+        output_path = os.path.join(parent_dir, "bin/tinyshakespeare.bin")
         tokens.tofile(output_path)
         
 

@@ -1,4 +1,5 @@
 .vscode
-*.bin
+*/bin
 */build
 *.DS_Store
+*.json

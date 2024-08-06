@@ -1,7 +1,7 @@
 #ifndef GPT2_HPP
 #define GPT2_HPP
 
-#include "./classes.hpp"
+#include "classes.hpp"
 
 // get number of activations needed for forward pass
 size_t gpt2_num_acts(size_t B, size_t T, size_t C, size_t L, size_t V);
@@ -21,6 +21,7 @@ class GPT2 {
 
         void zero_grad();
         void set_temperature(float temp);
+        void load_weights(const std::string& fname);
         void update(int t); 
 
         void forward(Node* out, Node* in);
@@ -30,7 +31,7 @@ class GPT2 {
         const size_t L;    // number of transformer blocks (default 12)
         const size_t V;    // vocab size (default 50257)
         const size_t maxT; // max sequence length (default 1024)
-        const size_t NH; // number of attention heads
+        const size_t NH;   // number of attention heads
 
         size_t num_params; // number of parameters
 

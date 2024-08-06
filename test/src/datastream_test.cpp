@@ -37,7 +37,7 @@ TEST_F(DataStreamTest, createDataStream) {
  */
 TEST_F(DataStreamTest, openfile) {
 
-    std::string filepath = "/Users/malavpatel/Coding_Projects/StaticGrad/tokenizer/tokens/tinystories.bin";
+    std::string filepath = "/Users/malavpatel/Coding_Projects/StaticGrad/gpt2_python/bin/tinystories.bin";
 
     EXPECT_NO_THROW(ds->open(filepath));
     EXPECT_TRUE(ds->stream != nullptr);
@@ -68,7 +68,7 @@ TEST_F(DataStreamTest, openinvalidfile) {
  */
 TEST_F(DataStreamTest, tinystories) {
 
-    std::string filepath = "/Users/malavpatel/Coding_Projects/StaticGrad/tokenizer/tokens/tinystories.bin";
+    std::string filepath = "/Users/malavpatel/Coding_Projects/StaticGrad/gpt2_python/bin/tinystories.bin";
     ds->open(filepath);
 
     ds->init_buffer(64);
@@ -84,7 +84,7 @@ TEST_F(DataStreamTest, tinystories) {
 
 TEST_F(DataStreamTest, tinyshakespeare) {
 
-    std::string filepath = "/Users/malavpatel/Coding_Projects/StaticGrad/tokenizer/tokens/tinyshakespeare.bin";
+    std::string filepath = "/Users/malavpatel/Coding_Projects/StaticGrad/gpt2_python/bin/tinyshakespeare.bin";
     ds->open(filepath);
 
     ds->init_buffer(64);

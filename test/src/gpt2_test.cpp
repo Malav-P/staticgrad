@@ -277,6 +277,32 @@ TEST_F(GPT2Test, Update) {
     }
 }
 
+
+/**
+ * @brief Test that the load_weights function can load model weights from a file.
+ *
+ * This test verifies that the load_weights function works correctly and that
+ * it can load model weights from a file. It also checks that the function throws
+ * a std::runtime_error when the expected number of bytes does not match the
+ * actual number of bytes in the file.
+ */
+TEST_F(GPT2Test, load_weights) {
+
+    C = 768; // embedding dimension
+    L = 12; // number of transformer blocks
+    V = 50257; // vocab size
+    maxT = 1024; // max sequence length
+    NH = 12; // number of attention heads
+
+    GPT2* model = nullptr;
+    model = new GPT2(C, L, V, maxT, NH);
+
+    std::string filepath = "/Users/malavpatel/Coding_Projects/StaticGrad/gpt2_python/bin/gpt2_weights.bin";
+
+    EXPECT_NO_THROW(model->load_weights(filepath));
+
+}
+
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

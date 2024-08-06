@@ -1,5 +1,91 @@
 #include "gpt2.hpp"
+#include <fstream>
 
+/**
+ * @brief Calculate the number of external activations required for a given batch size, sequence length, and model configuration.
+ *
+ * @param B Batch size.
+ * @param T Sequence length.
+ * @param C Number of attention heads.
+ * @param L Number of transformer blocks.
+ * @param V Size of the vocabulary.
+ * @return The number of activations.
+ * 
+ * @note This figure does not include the internal activations for the mean (B*T) and rstd (B*T) used by layernorms and the internal pre_softmax and post_softmax buffers used
+ * in an attention block.
+ */
+size_t gpt2_num_acts(size_t B, size_t T, size_t C, size_t L, size_t V){
+    size_t num_acts = B*T;
+
+    // encoder (B, T) -> (B, T, C)
+    num_acts += B*T*C;
+
+    // transformer blocks (B, T, C) -> (B, T, C)
+    num_acts += L * (16 * B * T * C);
+
+    // final layernorm (B, T, C) -> (B, T, C)
+    num_acts += B*T*C;
+
+    // unembedding (B, T, C) -> (B, T, V)
+    num_acts += B*T*V;
+
+    // softmax (B, T, V) -> (B, T, V)
+    num_acts += B*T*V;
+
+    return num_acts;
+};
+
+/**
+ * @brief Calculate the number of parameters for a given model configuration.
+ *
+ * @param C Number of attention heads.
+ * @param L Number of transformer blocks.
+ * @param vocab_size Size of the vocabulary.
+ * @param max_seqlen Maximum sequence length.
+ * @return The number of parameters in the model
+ */
+size_t gpt2_memrequirement(size_t C, size_t L, size_t vocab_size, size_t max_seqlen){
+
+    size_t num_params = 0;
+
+    // ------TRANSFORMER BLOCK----------
+
+    // first layer norm
+    num_params += C + C; 
+
+    // matmul from attention (Q, K, V) matrices and bias;
+    num_params += C * 3*C + 3*C;
+
+    // matmul from post attention
+    num_params += C*C + C;
+
+    // second layer norm
+    num_params += C + C;
+
+    // fully connected layer (projection into higher dimension)
+    num_params += C * 4*C + 4*C;
+
+    // second fully connected layer (projection back into embedding dimension)
+    num_params += 4*C * C + C;
+
+    // --------------------------------
+
+    // multiply by number of transformer blocks
+    num_params *= L;
+
+    // token embedding matrix
+    num_params += C * vocab_size;
+
+    // positional embedding matrix
+    num_params += C * max_seqlen;
+
+    // final layer norm
+    num_params += C + C;
+
+
+    return num_params;
+
+};
 
  /**
   * Constructor for the GPT2 class.
@@ -98,93 +184,6 @@ void GPT2::zero_grad(){
 void GPT2::set_temperature(float temp){
     softmax->set_temperature(temp);
 }
-
-
-/**
- * @brief Calculate the number of external activations required for a given batch size, sequence length, and model configuration.
- *
- * @param B Batch size.
- * @param T Sequence length.
- * @param C Number of attention heads.
- * @param L Number of transformer blocks.
- * @param V Size of the vocabulary.
- * @return The number of activations.
- * 
- * @note This figure does not include the internal activations for the mean (B*T) and rstd (B*T) used by layernorms and the internal pre_softmax and post_softmax buffers used
- * in an attention block.
- */
-size_t gpt2_num_acts(size_t B, size_t T, size_t C, size_t L, size_t V){
-    size_t num_acts = B*T;
-
-    // encoder (B, T) -> (B, T, C)
-    num_acts += B*T*C;
-
-    // transformer blocks (B, T, C) -> (B, T, C)
-    num_acts += L * (16 * B * T * C);
-
-    // final layernorm (B, T, C) -> (B, T, C)
-    num_acts += B*T*C;
-
-    // unembedding (B, T, C) -> (B, T, V)
-    num_acts += B*T*V;
-
-    // softmax (B, T, V) -> (B, T, V)
-    num_acts += B*T*V;
-
-    return num_acts;
-};
-
-/**
- * @brief Calculate the number of parameters for a given model configuration.
- *
- * @param C Number of attention heads.
- * @param L Number of transformer blocks.
- * @param vocab_size Size of the vocabulary.
- * @param max_seqlen Maximum sequence length.
- * @return The number of parameters in the model
- */
-size_t gpt2_memrequirement(size_t C, size_t L, size_t vocab_size, size_t max_seqlen){
-
-    size_t num_params = 0;
-
-    // ------TRANSFORMER BLOCK----------
-
-    // first layer norm
-    num_params += C + C; 
-
-    // matmul from attention (Q, K, V) matrices and bias;
-    num_params += C * 3*C + 3*C;
-
-    // matmul from post attention
-    num_params += C*C + C;
-
-    // second layer norm
-    num_params += C + C;
-
-    // fully connected layer (projection into higher dimension)
-    num_params += C * 4*C + 4*C;
-
-    // second fully connected layer (projection back into embedding dimension)
-    num_params += 4*C * C + C;
-
-    // --------------------------------
-
-    // multiply by number of transformer blocks
-    num_params *= L;
-
-    // token embedding matrix
-    num_params += C * vocab_size;
-
-    // positional embedding matrix
-    num_params += C * max_seqlen;
-
-    // final layer norm
-    num_params += C + C;
-
-
-    return num_params;
-
-};
 
 /**
  * @brief Update the parameters of the model using Adam
@@ -355,4 +354,42 @@ void GPT2::backward(Node* out, Node* in){
 
     delete in_internal;
     delete out_internal;
+}
+
+
+/**
+ * Loads weights from a file into the models parameters.
+ *
+ * Args:
+ *   @param fname: The name of the file containing the weights.
+ *
+ * Returns:
+ *   None.
+ *
+ * Throws:
+ *   std::runtime_error if the file cannot be opened, the number of bytes in the file does not match the expected number, or an error occurs while reading the file.
+ */
+void GPT2::load_weights(const std::string& fname)
+{
+    // Open the file in binary mode
+    std::ifstream inputFile(fname, std::ios::binary);
+
+    if (!inputFile.is_open()){
+        throw std::runtime_error("could not open file");
+    }
+
+    // Get the size of the file
+    inputFile.seekg(0, std::ios::end);
+    std::streamsize fileSize = inputFile.tellg();
+    inputFile.seekg(0, std::ios::beg);
+
+    if ((this->num_params) * sizeof(float) != fileSize){
+        throw std::runtime_error("number of bytes in file does not match expected");
+    }
+    
+
+    // Read the contents of the file into the buffer
+    if (!inputFile.read(reinterpret_cast<char*>(this->params), fileSize)) {
+        throw std::runtime_error("error loading contents into buffer");
+    }
 }

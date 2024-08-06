@@ -6,7 +6,7 @@ class TokenizerTest : public ::testing::Test {
     protected:
         std::string filename;
         void SetUp() override {
-            filename = "/Users/malavpatel/Coding_Projects/StaticGrad/tokenizer/gpt2_vocab.bin";
+            filename = "/Users/malavpatel/Coding_Projects/StaticGrad/gpt2_python/bin/gpt2_vocab.bin";
         }
         void TearDown() override {}
 };

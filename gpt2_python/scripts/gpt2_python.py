@@ -1,15 +1,24 @@
 import torch
-import tiktoken
 from transformers import GPT2LMHeadModel, GPT2Tokenizer, GPT2Config, GPT2Model
 import os
 import json
 import numpy as np
+import warnings
 
 
 class GPT2WithIntermediateStates(GPT2Model):
     def __init__(self, config):
         super().__init__(config)
         self.intermediate_states = []
+        self.module_name = None
+
+    def set_hook(self, module_name):
+        named_modules = dict(model.named_modules())  # Convert to dictionary for easy lookup
+        if module_name in named_modules:
+            self.module_name = module_name
+        else:
+            warnings.warn("module name not found, setting hook to None")
+            self.module_name = None
 
     def forward(self, *args, **kwargs):
         # Reset intermediate states at the beginning of each forward pass
@@ -19,9 +28,11 @@ class GPT2WithIntermediateStates(GPT2Model):
             self.intermediate_states.append(output)
 
         hooks = []
-        for name, module in self.named_modules():
-            if 'h.11.ln_1' == name:
-                hooks.append(module.register_forward_hook(hook))
+
+        if self.module_name is not None:
+            for name, module in self.named_modules():
+                if self.module_name == name:
+                    hooks.append(module.register_forward_hook(hook))
 
         output = super().forward(*args, **kwargs)
 
@@ -38,12 +49,12 @@ class GPT2WithIntermediateStates(GPT2Model):
 def get_weights():
 
     # Initialize the model
-    model, tokenizer = load_model()
+    model, _ = load_model(pretrained=True, debug=False)
 
     # Prepare file paths
-    base_path = os.path.dirname(__file__)
-    weights_file = os.path.join(base_path, f"{model.config.name_or_path}_weights.bin")
-    metadata_file = os.path.join(base_path, f"{model.config.name_or_path}_metadata.json")
+    base_path = os.path.dirname(os.path.dirname(__file__))
+    weights_file = os.path.join(base_path, f"bin/{model.config.name_or_path}_weights.bin")
+    metadata_file = os.path.join(base_path, f"bin/{model.config.name_or_path}_metadata.json")
 
     # Open a binary file to write the weights and a JSON file for metadata
     with open(weights_file, 'wb') as f, open(metadata_file, 'w') as meta_f:
@@ -120,8 +131,6 @@ def load_model(pretrained = True, debug=True):
         else:
             model = GPT2LMHeadModel(config)
 
-
-
     tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
 
     return model, tokenizer
@@ -144,26 +153,10 @@ def yap(model, tokenizer):
     print(generated_text)
 
 
-def forward_debug(model, tokenizer, prompt):
-    model_inputs = tokenizer(prompt, return_tensors='pt').to("cpu")
-
-    # Forward pass through the model with hidden states output
-    with torch.no_grad():
-        outputs = model(**model_inputs, output_hidden_states=True)
-
-    # Extract hidden state
-
-    return model.get_intermediate_states()
-
 def gpt2_python():
     # Initialize the model and tokenizer
 
-    model, tokenizer = load_model()
-    model.eval()
-
-    # Load the GPT-2 model's encoder
-    tiktokenizer = tiktoken.get_encoding("gpt2")
-    eot_token = tiktokenizer._special_tokens['<|endoftext|>']
+    model, _ = load_model()
 
     for name, module in model.named_modules():
         print(f"Module Name: {name}, Module Type: {module.__class__.__name__}")
@@ -189,13 +182,17 @@ if __name__ == "__main__":
     # yap(model, tokenizer)
 
 
-    model, tokenizer = load_model(pretrained=True, debug=True)
-    model.eval()
+    # model, tokenizer = load_model(pretrained=True, debug=True)
+    # model.set_hook("h.0.ln_1")
 
-    prompt = "I enjoy taking my dog out and"
+    # prompt = "There was a hurricane"
 
-    im_states = forward_debug(model, tokenizer, prompt)
+    # model_inputs = tokenizer(prompt, return_tensors='pt').to("cpu")
 
-    print(im_states[0][0, 0, :4])
-    
+    # output = model.forward(**model_inputs)
+
+    # print(model.get_intermediate_states()[0][0, 0, :4])
+
+    get_weights()
+
 
