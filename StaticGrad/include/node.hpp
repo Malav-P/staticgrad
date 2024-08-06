@@ -12,6 +12,8 @@ class Node {
         std::vector<size_t> shape;
         size_t size; // number of elements
 
+        size_t current_T;
+
 
         Node();
         ~Node(){}

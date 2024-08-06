@@ -19,6 +19,8 @@ void setup_node(Node* node, std::vector<size_t> shape_){
     size_t T = shape_[1];
     size_t C = shape_[2];
 
+    node->current_T = T;
+
     size_t numel = 1;
 
     for (size_t element : shape_){

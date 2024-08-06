@@ -145,6 +145,7 @@ void train(int max_batches){
 
     Activation* activations = new Activation(B, T, model->C, model->L, model->V);
     activations->point_Nodes(out, in);
+    in->current_T = T; // use all positions for training
     
     ds->init_buffer(B*T + 1); // +1 to include necessary target tokens for training
 

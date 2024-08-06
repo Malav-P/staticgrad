@@ -30,6 +30,8 @@ u_int16_t next_token(GPT2*& model,
     size_t T = out->shape[1];
     size_t V = out->shape[2];
 
+    in->current_T = t;
+
     if (B != 1){
         throw std::runtime_error("Batch size B must equal 1 in inference mode.");
     }

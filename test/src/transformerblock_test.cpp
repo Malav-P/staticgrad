@@ -27,12 +27,14 @@ class TransformerBlockTest : public ::testing::Test {
 		in->act_grads = activations_grad;
 		in->shape = {B, T, C};
 		in->size = B * T * C;
+		in->current_T = T;
 
 		out = new Node();
 		out->act = activations + 16*B*T*C;
 		out->act_grads = activations_grad + 16*B*T*C;
 		out->shape = {B, T, C};
 		out->size = B * T * C;
+		out->current_T = T;
 	}
 
 	void TearDown() override {

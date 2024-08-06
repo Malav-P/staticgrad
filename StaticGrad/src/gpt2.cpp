@@ -240,15 +240,17 @@ void GPT2::forward(Node* out, Node* in){
     in_internal->act_grads = in->act_grads;
     in_internal->shape = in->shape;
     in_internal->size = in->size;
+    in_internal->current_T = in->current_T;
 
     Node* out_internal = new Node();
     out_internal->act = in_internal->act + B * T;
     out_internal->act_grads = in_internal->act_grads + B * T; 
     out_internal->shape = {B, T, C}; // output shape of encoder
     out_internal->size = B * T * C;
+    out_internal->current_T = in->current_T;
+
 
     encoder->forward(out_internal, in_internal);
-
 
     // forward through the transformer blocks
     for (size_t i = 0; i < L; i++){
@@ -267,7 +269,6 @@ void GPT2::forward(Node* out, Node* in){
 
         // forward through i-th TransformerBlock
         tblock->forward(out_internal, in_internal);
-
     }
 
     // forward through layernorm

@@ -5,7 +5,6 @@
 #include <Accelerate/Accelerate.h>
 
 
-
 /**
  * Shifts the pointer location for in and out activations/grad in order to process the next layer in gpt. Used for the forward pass
  *
@@ -91,11 +90,14 @@ void Encoder::forward(Node* out, Node* in){
     size_t B = in->shape[0];
     size_t T = in->shape[1];
 
+    size_t current_T = in->current_T;
+
+
     float* wte = params;
     float* wpe = params + C * vocab_size;
 
     for (size_t b = 0; b < B; b++){
-        for (size_t t = 0; t < T; t++){
+        for (size_t t = 0; t < current_T; t++){
             // get token_id (lrint casts the double to a long int)
             long int token_id = lrint(in->act[b*T + t]);
             
@@ -276,12 +278,16 @@ void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
     in_internal->act_grads = in->act_grads;
     in_internal->shape = in->shape;
     in_internal->size = in->size;
+    in_internal->current_T = in->current_T;
+
 
     Node* out_internal = new Node();
     out_internal->act = in_internal->act + B * T * C;
     out_internal->act_grads = in_internal->act_grads + B * T * C;
     out_internal->shape = {B, T, C};
     out_internal->size = B * T * C;
+    out_internal->current_T = in->current_T;
+
 
     // out should be of the same shape as in, should place a check here.
 
@@ -336,7 +342,7 @@ void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
 
     // verify that results are in out Node
     if ((out_internal->act != out->act) || (out_internal->act_grads != out->act_grads) || (out_internal->size != out->size)){
-        throw std::runtime_error("out node and out_internal node are not equal");
+        throw std::runtime_error("out node and out_internal node are not equal in transformer block");
     }
 
     // free memory of helper nodes
@@ -467,6 +473,8 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
     size_t T = in->shape[1];
     size_t C = in->shape[2] / 3;
 
+    size_t current_T = in->current_T;
+
 
     size_t head_size = C / num_heads;
 
@@ -477,7 +485,7 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
     
     for (size_t b = 0 ; b < B; b++){
 
-        for (size_t t = 0; t < T; t++){
+        for (size_t t = 0; t < current_T; t++){
 
             for (size_t h = 0 ; h < num_heads; h++){
 
@@ -640,8 +648,6 @@ void Attention::backward(Node* out, Node* in) {
         }
 
     }
-
-
 }
 
 /**
@@ -706,6 +712,8 @@ void LayerNorm::forward(Node* out, Node* in) { // (B, T, C) -> (B, T, C)
     size_t T = in->shape[1];
     size_t C = in->shape[2];
 
+    size_t current_T = in->current_T;
+
 
     delete[] rstd; delete[] m;
     rstd = new float[B*T];
@@ -716,7 +724,7 @@ void LayerNorm::forward(Node* out, Node* in) { // (B, T, C) -> (B, T, C)
 
 
     for (size_t b = 0; b < B; b++){
-        for (size_t t = 0; t < T; t++){
+        for (size_t t = 0; t < current_T; t++){
             float* inp = in->act + b*T*C + t*C;
             float m_ = 0.0f;
 
@@ -835,11 +843,13 @@ void Matmul::forward(Node* out, Node* in) {
     size_t T = in->shape[1];
     size_t C = in->shape[2];
     size_t OC = out->shape[2];
+
+    size_t current_T = in->current_T;
     
     float alpha = multiplier, beta = 0.0f;
     float* B_ = params;
 
-    int M = T; // rows of A and C
+    int M = current_T; // rows of A and C
     int N = OC; // columns of B and C
     int K = C; // columns of A and rows of B
 
@@ -885,11 +895,14 @@ void Matmul::forward2(Node* out, Node* in) {
     size_t T = in->shape[1];
     size_t C = in->shape[2];
     size_t OC = out->shape[2];
+
+    size_t current_T = in->current_T;
+
     
     float alpha = multiplier, beta = 0.0f;
     float* B_ = params;
 
-    int M = T; // rows of A and C
+    int M = current_T; // rows of A and C
     int N = OC; // columns of trans(B) and C
     int K = C; // columns of A and rows of B
 
@@ -1025,13 +1038,15 @@ void RowAdd::forward(Node* out, Node* in){
     size_t T = in->shape[1];
     size_t C = in->shape[2];
 
+    size_t current_T = in->current_T;
+
 
     for (size_t b = 0; b < B; b++){
 
         float* out_ = out->act + b * T * C;
         float* inp0 = in->act + b * T * C;
 
-        for (size_t t = 0; t < T; t++){
+        for (size_t t = 0; t < current_T; t++){
             for (size_t c = 0; c < C; c++){
                 out_[t*C + c] = inp0[t*C + c] + params[c];
             }
@@ -1069,8 +1084,10 @@ void Softmax::forward(Node* out, Node* in){
     size_t T = in->shape[1];
     size_t V = in->shape[2];
 
+    size_t current_T = in->current_T;
+
     for (size_t b = 0; b < B; b++){
-        for (size_t t = 0; t < T; t++){
+        for (size_t t = 0; t < current_T; t++){
             float* bt_arr = in->act + b * T * V + t * V;
             float* out_bt_arr = out->act + b * T * V + t * V;
 

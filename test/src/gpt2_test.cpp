@@ -84,12 +84,14 @@ TEST_F(GPT2Test, Forward) {
     in->act_grads = grad;
     in->shape = {B, T};
     in->size = B*T;
+    in->current_T = T;
 
     Node* out = new Node();
     out->act = acts + num_act - B*T*V;
     out->act_grads = grad + num_act - B*T*V;
     out->shape = {B, T, V};
     out->size = B*T*V;
+    out->current_T = T;
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -158,12 +160,14 @@ TEST_F(GPT2Test, Backward) {
     in->act_grads = grad;
     in->shape = {B, T};
     in->size = B*T;
+    in->current_T = T;
 
     Node* out = new Node();
     out->act = acts + num_act - B*T*V;
     out->act_grads = grad + num_act - B*T*V;
     out->shape = {B, T, V};
     out->size = B*T*V;
+    out->current_T = T;
 
 
     std::random_device rd;
@@ -212,9 +216,6 @@ TEST_F(GPT2Test, InvalidNumHeads) {
     V = 50257; // vocab size
     maxT = 1024; // max sequence length
     NH = 11; // number of attention heads
-
-    B = 4; // batch size
-    T = 64; // sequence length
 
     GPT2* model = nullptr;
 
