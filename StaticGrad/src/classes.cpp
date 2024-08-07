@@ -450,6 +450,8 @@ TransformerBlock::~TransformerBlock(){
 
     delete res1_node;
     delete res2_node;
+
+
 }
 
 /**
@@ -474,18 +476,24 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
     size_t C = in->shape[2] / 3;
 
     size_t current_T = in->current_T;
-
-
     size_t head_size = C / num_heads;
 
     int half_buffer_size = num_heads*B*lrint(T*(T+1)/2);
 
-    delete[] buffer;
-    buffer = new float[2*half_buffer_size];
+    size_t start;
+    if (buffer != nullptr){ // kv cache exists
+        start = current_T - 1;
+    }
+    else { // kv cache does not exist (this should always be the case during training)
+        start = 0;
+        buffer = new float[2*half_buffer_size];
+    }
+    // delete[] buffer should be called after yapping is done or after one training iteration is done
+    
     
     for (size_t b = 0 ; b < B; b++){
 
-        for (size_t t = 0; t < current_T; t++){
+        for (size_t t = start; t < current_T; t++){
 
             for (size_t h = 0 ; h < num_heads; h++){
 

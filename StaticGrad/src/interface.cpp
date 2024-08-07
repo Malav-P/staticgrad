@@ -8,38 +8,38 @@
 
 
 /**
-* Allocates and initializes the GPT-2 model, data stream, tokenizer, and nodes for a specified batch size and sequence length.
+* Allocates and initializes the GPT-2 model, data stream, tokenizer, activations, and nodes for a specified batch size and sequence length.
 *
-*  @param model  A pointer (passed by reference) to a GPT-2 model that will be allocated and initialized.
+*  @param model A pointer (passed by reference) to a GPT-2 model that will be allocated and initialized.
 *  @param ds A pointer (passed by reference) to a DataStream that will be allocated and initialized.
 *  @param tk A pointer (passed by reference) to a Tokenizer that will be allocated and initialized.
+*  @param activations A pointer (passed by reference) to an Activation object that will be allocated and initialized.
+*  @param out A pointer (passed by reference) to an output Node that will be allocated and initialized.
+*  @param in A pointer (passed by reference) to an input Node that will be allocated and initialized.
+*  @param B The batch size for the model and data stream.
+*  @param T The sequence length for the model and data stream.
 *  @param pretrained If true, load pre-trained weights for the model.
 *
-*  
 *  @throws `std::invalid_argument` If any of the passed pointers are not nullptr.
 *
-*  
-*   @note Postconditions:
-*   @note - The model, data stream, tokenizer are allocated and initialized.
-*   @note - The model is loaded with pre-trained weights if pretrained is true.
-*   @note - The tokenizer is initialized with the vocabulary from GPT-2.
+*  @note Postconditions:
+*  @note - The model, data stream, tokenizer, activations, and nodes are allocated and initialized.
+*  @note - The model is loaded with pre-trained weights if pretrained is true.
+*  @note - The tokenizer is initialized with the vocabulary from GPT-2.
 */
 void setup(GPT2*& model,
            DataStream*& ds,
            Tokenizer*& tk,
+           Activation*& activations,
+           Node*& out,
+           Node*& in,
+           size_t B,
+           size_t T,
            bool pretrained) 
 {
     
-    if (model != nullptr){
-        throw std::invalid_argument("model must be empty (nullptr)");
-    }
-
-    if (ds != nullptr){
-        throw std::invalid_argument("datastream must be empty (nullptr)");
-    }
-
-    if (tk != nullptr){
-        throw std::invalid_argument("tokenizer must be empty (nullptr)");
+    if ((model != nullptr) || (ds != nullptr) || (tk != nullptr) || (activations != nullptr) || (out != nullptr) || (in != nullptr)){
+        throw std::invalid_argument("passed pointers must be empty (nullptr)");
     }
 
 
@@ -51,16 +51,25 @@ void setup(GPT2*& model,
 
     model = new GPT2(C, L, V, maxT, NH);
 
+    std::string PREFIX = "/Users/malavpatel/Coding_Projects/StaticGrad/gpt2_python/";
+
     if (pretrained){
-        std::string fp_weights = "/Users/malavpatel/Coding_Projects/StaticGrad/gpt2_python/bin/gpt2_weights.bin";
+        std::string fp_weights = PREFIX + "bin/gpt2_weights.bin";
         model->load_weights(fp_weights);
     }
 
-    std::string fp_ds = "/Users/malavpatel/Coding_Projects/StaticGrad/gpt2_python/bin/tinyshakespeare.bin";
+    std::string fp_ds = PREFIX + "bin/tinyshakespeare.bin";
     ds = new DataStream(fp_ds);
+    ds->init_buffer(B*T + 1); // +1 to include necessary target tokens for training
 
-    std::string fp_tk = "/Users/malavpatel/Coding_Projects/StaticGrad/gpt2_python/bin/gpt2_vocab.bin";
+    std::string fp_tk = PREFIX + "bin/gpt2_vocab.bin";
     tk = new Tokenizer(fp_tk);
+
+    activations = new Activation(B, T, model->C, model->L, model->V);
+
+    out = new Node();
+    in = new Node();
+    activations->point_nodes(out, in);
 
 
     // + L*2*B*T + L*NH*B*T*(T+1) + 2*B*T
@@ -72,9 +81,10 @@ void setup(GPT2*& model,
     std::cout << "vocab size: " << V << std::endl;
     std::cout << "num layers: " << L << std::endl;
     std::cout << "num params: " << model->num_params << std::endl;
-    // std::cout << "current batch size: " << B << std::endl;
-    // std::cout << "current sequence length: " << T << std::endl;
-    // std::cout << "num activations: " << num_acts  << std::endl;
+    std::cout << "allocated batch size: " << B << std::endl;
+    std::cout << "allocated sequence length: " << T << std::endl;
+    std::cout << "num activations: " << activations->size << std::endl;
+    std::cout << "\n";
 
 }
 
@@ -82,11 +92,12 @@ void setup(GPT2*& model,
 /**
 * Deallocates the memory allocated by the setup function.
 *
-* @param model: A pointer (passed by reference) to the GPT-2 model to be deallocated.
-* @param ds: A pointer (passed by reference) to the DataStream to be deallocated. 
-* @param tk: A pointer (passed by reference) to the Tokenizer to be deallocated.
-* @param out: A pointer (passed by reference) to the output node to be deallocated.
-* @param in: A pointer (passed by reference) to the input node to be deallocated.
+* @param model A pointer (passed by reference) to the GPT-2 model to be deallocated.
+* @param ds A pointer (passed by reference) to the DataStream to be deallocated.
+* @param tk A pointer (passed by reference) to the Tokenizer to be deallocated.
+* @param activations A pointer (passed by reference) to the Activation object to be deallocated.
+* @param out A pointer (passed by reference) to the output Node to be deallocated.
+* @param in A pointer (passed by reference) to the input Node to be deallocated.
 *
 * @note Postconditions:
 *   @note - All memory allocated by the setup function is released.
@@ -94,16 +105,28 @@ void setup(GPT2*& model,
 */
 void tear_down(GPT2*& model,
                DataStream*& ds,
-               Tokenizer*& tk)
+               Tokenizer*& tk,
+               Activation*& activations,
+               Node*& out,
+               Node*& in)
 {
-    delete model;
-    model = nullptr;
+    delete out;
+    out = nullptr;
+
+    delete in;
+    in = nullptr;
+
+    delete activations;
+    activations = nullptr;
+
+    delete tk;
+    tk = nullptr;
 
     delete ds;
     ds = nullptr;
 
-    delete tk;
-    tk = nullptr;
+    delete model;
+    model = nullptr;
 
     std::cout << "\nteardown complete, memory deallocated" << std::endl;
 }
@@ -135,20 +158,17 @@ void train(int max_batches){
     GPT2* model = nullptr;
     DataStream* ds = nullptr;
     Tokenizer* tk = nullptr;
-    Node* out = new Node();
-    Node* in = new Node();
+    Activation* activations = nullptr;
+    Node* out = nullptr;
+    Node* in = nullptr;
     size_t B = 4;
     size_t T = 64;
-
     bool pretrained = true;
-    setup(model, ds, tk, pretrained);
 
-    Activation* activations = new Activation(B, T, model->C, model->L, model->V);
-    activations->point_Nodes(out, in);
+    setup(model, ds, tk, activations, out, in, B, T, pretrained);
+
     in->current_T = T; // use all positions for training
     
-    ds->init_buffer(B*T + 1); // +1 to include necessary target tokens for training
-
     // create node for storing losses.
     Node* loss = new Node();
     loss->shape = {B, T};
@@ -168,7 +188,8 @@ void train(int max_batches){
     for (int t = 0; t < max_batches; t++){
         ds->load_buffer(); // loads B*T + 1 tokens
         ds->buffer_to_Node(in, B*T); // transfer first B*T tokens from buffer to in node
-
+        
+        model->clear_kv_cache(); // clear kv cache
         model->forward(out, in); // do forward pass
         crossentropy_forward(loss, out, (ds->buffer) + 1); // compute loss
 
@@ -190,11 +211,7 @@ void train(int max_batches){
 
     delete softmax_in;
 
-    delete activations;
-    delete out;
-    delete in;
-
-    tear_down(model, ds, tk);
+    tear_down(model, ds, tk, activations, out, in);
 }
 
 

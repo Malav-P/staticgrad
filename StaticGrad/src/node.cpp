@@ -55,7 +55,7 @@ void Activation::zero_grad()
     }
 }
 
-void Activation::point_Nodes(Node* out, Node* in)
+void Activation::point_nodes(Node* out, Node* in)
 {
     in->act = act;
     in->act_grads = act_grads;

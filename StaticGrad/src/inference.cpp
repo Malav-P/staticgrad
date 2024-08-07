@@ -50,6 +50,9 @@ void yap(GPT2*& model,
          Node*& in,
          std::string start){
 
+    // clear kv cache
+    model->clear_kv_cache();
+
     // maybe check / assert B = 1
 
 
@@ -96,4 +99,7 @@ void yap(GPT2*& model,
 
         decoded_tokens += next_tok_dec;
     }
+
+    // clear kv cache
+    model->clear_kv_cache();
 }

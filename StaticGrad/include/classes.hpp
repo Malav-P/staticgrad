@@ -99,7 +99,10 @@ class Attention : public Operation {
 
         ~Attention(){
             delete[] buffer;
+            buffer = nullptr;
+
             delete[] dbuffer;
+            dbuffer = nullptr;
         }
 
         void forward(Node* out, Node* in) override;

@@ -208,6 +208,13 @@ void GPT2::update(int t){
 }
 
 
+void GPT2::clear_kv_cache(){
+    for (auto& tblock : tblocks){
+        delete[] tblock->att->buffer;
+        tblock->att->buffer = nullptr;
+    }
+}
+
 
 /**
  * @brief Performs the forward pass of the GPT-2 model.

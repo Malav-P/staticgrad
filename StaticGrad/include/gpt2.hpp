@@ -27,6 +27,8 @@ class GPT2 {
         void forward(Node* out, Node* in);
         void backward(Node* out, Node* in);
 
+        void clear_kv_cache();
+
         const size_t C;    // embedding dimension (default 768)
         const size_t L;    // number of transformer blocks (default 12)
         const size_t V;    // vocab size (default 50257)

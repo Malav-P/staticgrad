@@ -16,8 +16,10 @@ TEST_F(SetupTeardownTest, NoMemoryLeaks) {
     GPT2* model = nullptr;
     DataStream* ds = nullptr;
     Tokenizer* tk = nullptr;
-    Node* out = new Node();
-    Node* in = new Node();
+    Activation* activations = nullptr;
+    Node* out = nullptr;
+    Node* in = nullptr;
+    bool pretrained = true;
 
     size_t B = 1; // batch size
     size_t T = 1; // sequence length
@@ -25,15 +27,10 @@ TEST_F(SetupTeardownTest, NoMemoryLeaks) {
     size_t L = 12;
     size_t V = 50257;
 
-    setup(model, ds, tk);
-    Activation* activations = new Activation(B, T, C, L, V);
-    activations->point_Nodes(out, in);
+    setup(model, ds, tk, activations, out, in, B, T, pretrained);
     EXPECT_NE(model, nullptr);
 
-    tear_down(model, ds, tk);
-    delete activations;
-    delete out;
-    delete in;
+    tear_down(model, ds, tk, activations, out, in);
     
     EXPECT_EQ(model, nullptr);
 

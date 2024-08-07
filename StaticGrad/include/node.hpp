@@ -35,7 +35,7 @@ class Activation {
         ~Activation();
 
         void zero_grad();
-        void point_Nodes(Node* in, Node* out);
+        void point_nodes(Node* in, Node* out);
 
         
 };
