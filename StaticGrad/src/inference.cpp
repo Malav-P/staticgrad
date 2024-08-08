@@ -8,7 +8,6 @@
  *
  * Args:
  *   @param model: Pointer to instance of GPT2
- *   @param tk: Pointer to instance of tokenizer
  *   @param out: The output node where the computed loss will be stored, a 2D tensor of shape (B, T).
  *   @param in: The input node containing the probabilities, a 3D tensor of shape (B, T, V).
  *   @param t: Desired position of next token in sequence
@@ -17,7 +16,6 @@
  *   u_int16_t. The most probable token for that position
  */
 u_int16_t next_token(GPT2*& model,
-                     Tokenizer*& tk,
                      Node*& out,
                      Node*& in,
                      size_t t){
@@ -27,7 +25,6 @@ u_int16_t next_token(GPT2*& model,
     }
 
     size_t B = out->shape[0];
-    size_t T = out->shape[1];
     size_t V = out->shape[2];
 
     in->current_T = t;
@@ -91,7 +88,7 @@ void yap(GPT2*& model,
     // autogenerate tokens
     std::cout << start;
     for (size_t i = t; i < T; i++){
-        u_int16_t next_tok = next_token(model, tk, out, in, i);
+        u_int16_t next_tok = next_token(model, out, in, i);
         
         in->act[i] = next_tok;
         std::string next_tok_dec = tk->decode({next_tok});

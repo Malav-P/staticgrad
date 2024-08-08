@@ -135,7 +135,7 @@ float mean_loss(Node* loss_node){
     float m_loss = 0.0f;
     size_t numel = loss_node->size;
 
-    for (int i = 0; i < numel; i++){
+    for (size_t i = 0; i < numel; i++){
         m_loss += loss_node->act[i];
     }
 

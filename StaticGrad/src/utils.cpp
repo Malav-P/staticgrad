@@ -88,7 +88,7 @@ u_int16_t sample_token(float* probabilities, size_t length, bool random){
 
     // Check if probabilities are valid
     float sum = 0.0f;
-    for (int i = 0; i < length; i++) {
+    for (size_t i = 0; i < length; i++) {
         if (probabilities[i] < 0.0) {
             throw std::invalid_argument("Probabilities must be non-negative");
         }

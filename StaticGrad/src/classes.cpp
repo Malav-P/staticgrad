@@ -713,6 +713,18 @@ void GELU::backward(Node* out, Node* in) {
     }
 }
 
+
+
+/**
+ * Forward pass of the Layernorm operation
+ *
+ * This function normalizes each row of the input (along axis = 2) to have zero mean and unit variance. Then 
+ * it applies a scale and shift to each element. There are a total of 2 * C learnable parameters in the layernorm.
+ *
+ * 
+ * @param out Pointer to the output node.
+ * @param in Pointer to the input node.
+ */
 void LayerNorm::forward(Node* out, Node* in) { // (B, T, C) -> (B, T, C)
 
 
@@ -773,6 +785,16 @@ void LayerNorm::forward(Node* out, Node* in) { // (B, T, C) -> (B, T, C)
     }
 }
 
+/**
+ * Backward pass of the Layernorm operation
+ * 
+ * This function applies the backward pass of thel layernorm operation.
+ *
+ * @see `LayerNorm::forward` for details about the operation
+ * 
+ * @param out Pointer to the output node.
+ * @param in Pointer to the input node.
+ */
 void LayerNorm::backward(Node* out, Node* in){
 
 
@@ -1157,4 +1179,3 @@ void Softmax::backward(Node* out, Node* in){
 void Softmax::set_temperature(float temp){
     temperature = temp;
 }
-

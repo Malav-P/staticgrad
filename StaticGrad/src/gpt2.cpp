@@ -388,7 +388,7 @@ void GPT2::load_weights(const std::string& fname)
 
     // Get the size of the file
     inputFile.seekg(0, std::ios::end);
-    std::streamsize fileSize = inputFile.tellg();
+    size_t fileSize = inputFile.tellg();
     inputFile.seekg(0, std::ios::beg);
 
     if ((this->num_params) * sizeof(float) != fileSize){

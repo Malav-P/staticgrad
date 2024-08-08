@@ -15,10 +15,7 @@ void fillArrayWithOnes(float* arr, int size) {
 }
 
 void setup_node(Node* node, std::vector<size_t> shape_){
-    size_t B = shape_[0];
     size_t T = shape_[1];
-    size_t C = shape_[2];
-
     node->current_T = T;
 
     size_t numel = 1;

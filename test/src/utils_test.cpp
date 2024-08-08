@@ -94,19 +94,17 @@ TEST_F(UtilsTest, sample_token) {
     float probabilities[] = {0.4, 0.1, 0.2, 0.3};
     size_t length = sizeof(probabilities) / sizeof(float);
 
-    u_int16_t token = 0;
+    u_int16_t token;
 
     EXPECT_NO_THROW(token = sample_token(probabilities, length));
 
     int* counts = new int[length];
     for (int i = 0; i < 10000; i++){
-        u_int16_t token = sample_token(probabilities, 4, true);
-        
+        token = sample_token(probabilities, 4, true);
         counts[token] += 1;
-        
     }
 
-    for (int i = 0; i < length; i++){
+    for (size_t i = 0; i < length; i++){
         EXPECT_NEAR(counts[i], 10000*probabilities[i], 200);
     }
 

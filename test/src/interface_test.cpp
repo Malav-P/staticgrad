@@ -23,9 +23,6 @@ TEST_F(SetupTeardownTest, NoMemoryLeaks) {
 
     size_t B = 1; // batch size
     size_t T = 1; // sequence length
-    size_t C = 768;
-    size_t L = 12;
-    size_t V = 50257;
 
     setup(model, ds, tk, activations, out, in, B, T, pretrained);
     EXPECT_NE(model, nullptr);

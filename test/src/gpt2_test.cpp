@@ -196,10 +196,8 @@ TEST_F(GPT2Test, Backward) {
     }
 
     auto start = std::chrono::high_resolution_clock::now();
-
     // backward pass should work
     EXPECT_NO_THROW(model->backward(out, in));
-
     // Record end time
     auto end = std::chrono::high_resolution_clock::now();
     // Calculate the duration
@@ -218,9 +216,12 @@ TEST_F(GPT2Test, InvalidNumHeads) {
     NH = 11; // number of attention heads
 
     GPT2* model = nullptr;
-
     EXPECT_THROW(model = new GPT2(C, L, V, maxT, NH), std::invalid_argument);
 
+    // added to suppress compilation warnings for pointer
+    model = new GPT2();
+    delete model;
+    
 }
 
 TEST_F(GPT2Test, ZeroGrad) {
@@ -238,17 +239,14 @@ TEST_F(GPT2Test, ZeroGrad) {
         gpt2->grad[i] = 1.0f;
     }
 
-    // Measure the time taken by zero_grad()
+    // Measure the time taken by zero_grad() ( can comment )
     auto start = std::chrono::high_resolution_clock::now();
     gpt2->zero_grad();
     auto end = std::chrono::high_resolution_clock::now();
-
     // Calculate the elapsed time
     std::chrono::duration<double> elapsed = end - start;
-
-    // Print the elapsed time
+    // Print the elapsed time 
     std::cout << "Time taken by zero_grad(): " << elapsed.count() << " seconds" << std::endl;
-
 
     // Check if all gradients are zero
     for (size_t i = 0; i < gpt2->num_params; i++) {

@@ -67,6 +67,10 @@ TEST_F(TransformerBlockTest, InvalidNumHeads) {
 
 	num_heads = 0; // 768 is not divisible by 0
 	EXPECT_THROW(tblock = new TransformerBlock(params, params_grad, C, num_heads), std::invalid_argument);
+
+	// added to suppress compilation warnings for unused pointer
+	tblock = new TransformerBlock(params, params_grad, C, 12);
+	delete tblock;
 }
 
 
