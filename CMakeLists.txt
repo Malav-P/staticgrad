@@ -4,10 +4,23 @@ cmake_minimum_required(VERSION 3.10)
 project(StaticGrad)
 
 # Compiler settings
-set(CMAKE_CXX_COMPILER "clang++")
+# Find clang++ and g++ in the system PATH
+find_program(CLANGXX_EXECUTABLE NAMES clang++)
+find_program(GCCXX_EXECUTABLE NAMES g++)
+
+# Choose clang++ if found, otherwise fall back to g++
+if (CLANGXX_EXECUTABLE)
+    set(CMAKE_CXX_COMPILER "${CLANGXX_EXECUTABLE}")
+    message(STATUS "Using Clang++: ${CLANGXX_EXECUTABLE}")
+elseif (GCCXX_EXECUTABLE)
+    set(CMAKE_CXX_COMPILER "${GCCXX_EXECUTABLE}")
+    message(STATUS "Using G++: ${GCCXX_EXECUTABLE}")
+else()
+    message(FATAL_ERROR "No suitable C++ compiler found")
+endif()
 
 # Compiler flags
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra -std=c++14 -fPIC -Wall")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra -Wall -std=c++14 -fPIC")
 
 # Directory locations
 set(SRCDIR "StaticGrad/src")
@@ -33,16 +46,17 @@ if (ACCELERATE_LIBRARIES)
     message(STATUS "Accelerate framework found: ${ACCELERATE_LIBRARIES}")
     set(BLAS_LIBRARIES ${ACCELERATE_LIBRARIES})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DACCELERATE_NEW_LAPACK")
+    add_definitions(-DAPPLE)
 else()
-    message(STATUS "Accelerate framework not found. Checking for OpenBLAS...")
+    message(STATUS "Accelerate framework not found. Checking for BLAS...")
     
-    # Find OpenBLAS
-    find_package(OpenBLAS REQUIRED)
-    if (OpenBLAS_FOUND)
-        message(STATUS "OpenBLAS found: ${OpenBLAS_LIBRARIES}")
-        set(BLAS_LIBRARIES ${OpenBLAS_LIBRARIES})
+    # Find BLAS
+    find_package(BLAS REQUIRED)
+    if (BLAS_FOUND)
+        message(STATUS "BLAS found: ${BLAS_LIBRARIES}")
+        set(BLAS_LIBRARIES ${BLAS_LIBRARIES})
     else()
-        message(FATAL_ERROR "Neither Accelerate framework nor OpenBLAS found.")
+        message(FATAL_ERROR "Neither Accelerate framework nor BLAS found.")
     endif()
 endif()
 

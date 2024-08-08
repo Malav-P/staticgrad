@@ -2,7 +2,12 @@
 #include <cmath>
 #include <stdexcept>
 #include <iostream>
+
+#ifdef APPLE
 #include <Accelerate/Accelerate.h>
+#else
+#include <cblas.h>
+#endif
 
 
 /**

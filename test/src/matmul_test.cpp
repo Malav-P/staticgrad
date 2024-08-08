@@ -2,8 +2,11 @@
 #include "classes.hpp"
 #include "test_common.hpp"
 
-#include <Accelerate/Accelerate.h> // for cblas sgemm calls in this file
-
+#ifdef APPLE
+#include <Accelerate/Accelerate.h>
+#else
+#include <cblas.h>
+#endif
 
 class MatmulTest : public ::testing::Test {
   protected:
