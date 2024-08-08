@@ -15,10 +15,10 @@ class Tokenizer {
 
         Tokenizer(const std::string& filename);
 
-        std::string decode(u_int16_t* tokenIDs, int length);
-        std::string decode(const std::vector<u_int16_t>& tokenIDs);
+        std::string decode(uint16_t* tokenIDs, int length);
+        std::string decode(const std::vector<uint16_t>& tokenIDs);
 
-        std::vector<u_int16_t> encode(const std::string& str);
+        std::vector<uint16_t> encode(const std::string& str);
 };
 
 #endif // TOKENIZER_HPP

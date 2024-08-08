@@ -44,13 +44,13 @@ Tokenizer::Tokenizer(const std::string& filename){
  * @throw `std::invalid_argument` If the `tokenIDs` pointer is null.
  * @throw `std::out_of_range` If any token ID in the array is invalid (out of the range of the vocabulary).
  */ 
-std::string Tokenizer::decode(u_int16_t* tokenIDs, int length) {
+std::string Tokenizer::decode(uint16_t* tokenIDs, int length) {
     if (tokenIDs == nullptr){
         throw std::invalid_argument("input array is null");
     }
     std::string result;
     for (int i = 0; i < length; i++) {
-        u_int16_t key = tokenIDs[i];
+        uint16_t key = tokenIDs[i];
         if (key < 0 || key >= token_map.size()){
             throw std::out_of_range("key is out of range of vocab size");
         }
@@ -69,11 +69,11 @@ std::string Tokenizer::decode(u_int16_t* tokenIDs, int length) {
 *
 * @throw `std::out_of_range` If any token ID in the vector is invalid.
 */ 
-std::string Tokenizer::decode(const std::vector<u_int16_t>& tokenIDs) {
+std::string Tokenizer::decode(const std::vector<uint16_t>& tokenIDs) {
 
     std::string result("");
     for (size_t i = 0; i < tokenIDs.size(); i++) {
-        u_int16_t key = tokenIDs[i];
+        uint16_t key = tokenIDs[i];
         if (key < 0 || key >= token_map.size()){
             throw std::out_of_range("key is out of range of vocab size");
         }
@@ -92,14 +92,14 @@ std::string Tokenizer::decode(const std::vector<u_int16_t>& tokenIDs) {
 *
 * @throw `std::runtime_error` If there are unknown tokens in the input string.
 */
-std::vector<u_int16_t> Tokenizer::encode(const std::string& str) {
-    std::vector<u_int16_t> tokenIDs;
+std::vector<uint16_t> Tokenizer::encode(const std::string& str) {
+    std::vector<uint16_t> tokenIDs;
     std::string remainingStr = str;
 
     while (!remainingStr.empty()) {
         bool found = false;
         size_t maxLength = 0;
-        u_int16_t maxTokenId = 0;
+        uint16_t maxTokenId = 0;
 
         for (const auto& pair : token_map) {
             if (remainingStr.find(pair.second) == 0) {

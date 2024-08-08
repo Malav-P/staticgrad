@@ -37,7 +37,7 @@ class UtilsTest : public ::testing::Test {
  */
 TEST_F(UtilsTest, crossentropyforward) {
 
-    u_int16_t targets[] = {8}; // token ID of the target. We only have one because B = T = 1 for the test
+    uint16_t targets[] = {8}; // token ID of the target. We only have one because B = T = 1 for the test
     float softmax_out[] = {0.12, 0.03, 0.25, 0.07, 0.08, 0.15, 0.04, 0.1, 0.09, 0.07};
     for (size_t i = 0 ; i < V; i++){
         in->act[i] = softmax_out[i];
@@ -56,7 +56,7 @@ TEST_F(UtilsTest, crossentropyforward) {
  */
 TEST_F(UtilsTest, crossentropy_softmax_backward) {
 
-    u_int16_t targets[] = {8}; // token ID of the target. We only have one because B = T = 1 for the test
+    uint16_t targets[] = {8}; // token ID of the target. We only have one because B = T = 1 for the test
     float softmax_out[] = {0.12, 0.03, 0.25, 0.07, 0.08, 0.15, 0.04, 0.1, 0.09, 0.07};
     for (size_t i = 0 ; i < V; i++){
         out->act[i] = softmax_out[i];
@@ -94,7 +94,7 @@ TEST_F(UtilsTest, sample_token) {
     float probabilities[] = {0.4, 0.1, 0.2, 0.3};
     size_t length = sizeof(probabilities) / sizeof(float);
 
-    u_int16_t token;
+    uint16_t token;
 
     EXPECT_NO_THROW(token = sample_token(probabilities, length));
 

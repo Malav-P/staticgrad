@@ -62,10 +62,8 @@ endif()
 
 
 # Add include directories
-include_directories(${INCDIR} ${TEST_INCDIR} ${GTEST_INCLUDE_DIRS} "/opt/homebrew/include")
+include_directories(${INCDIR} ${TEST_INCDIR} ${GTEST_INCLUDE_DIRS} )
 
-# # Link directories if needed (usually not necessary with `find_package`)
-# link_directories(${GTEST_LIBRARY_DIRS})
 
 
 # Add source files

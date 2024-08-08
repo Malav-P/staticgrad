@@ -13,9 +13,9 @@
  *   @param t: Desired position of next token in sequence
  *
  * Returns:
- *   u_int16_t. The most probable token for that position
+ *   uint16_t. The most probable token for that position
  */
-u_int16_t next_token(GPT2*& model,
+uint16_t next_token(GPT2*& model,
                      Node*& out,
                      Node*& in,
                      size_t t){
@@ -36,7 +36,7 @@ u_int16_t next_token(GPT2*& model,
     model->forward(out, in);
 
     float* probabilities = out->act + (t-1)*V;
-    u_int16_t next_tok = sample_token(probabilities, V, true);
+    uint16_t next_tok = sample_token(probabilities, V, true);
 
     return next_tok;
 }
@@ -54,7 +54,7 @@ void yap(GPT2*& model,
 
 
     size_t T = in->shape[1];
-    u_int16_t eot = 50256;
+    uint16_t eot = 50256;
     size_t t; // for next_token call
 
     std::string decoded_tokens = start;
@@ -70,7 +70,7 @@ void yap(GPT2*& model,
 
     else {
 
-        std::vector<u_int16_t> encoded = tk->encode(start);
+        std::vector<uint16_t> encoded = tk->encode(start);
         size_t num_tokens = encoded.size();
 
         for (size_t i = 0; i < num_tokens; i++){
@@ -88,7 +88,7 @@ void yap(GPT2*& model,
     // autogenerate tokens
     std::cout << start;
     for (size_t i = t; i < T; i++){
-        u_int16_t next_tok = next_token(model, out, in, i);
+        uint16_t next_tok = next_token(model, out, in, i);
         
         in->act[i] = next_tok;
         std::string next_tok_dec = tk->decode({next_tok});

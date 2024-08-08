@@ -16,7 +16,7 @@
  * Returns:
  *   None. The computed loss is stored in the `act` array of the `out` node.
  */
-void crossentropy_forward(Node* out, Node* in, u_int16_t* targets){ // (B, T, V) -> (B, T)
+void crossentropy_forward(Node* out, Node* in, uint16_t* targets){ // (B, T, V) -> (B, T)
 
     size_t B = in->shape[0];
     size_t T = in->shape[1];
@@ -26,7 +26,7 @@ void crossentropy_forward(Node* out, Node* in, u_int16_t* targets){ // (B, T, V)
     for (size_t b = 0; b < B; b++){
         for (size_t t = 0; t < T; t++){
             float* probabilities = in->act + b*T*V + t*V;
-            u_int16_t target = targets[b*T + t];
+            uint16_t target = targets[b*T + t];
 
             out->act[b*T + t] = -std::logf(probabilities[target]);
 
@@ -47,7 +47,7 @@ void crossentropy_forward(Node* out, Node* in, u_int16_t* targets){ // (B, T, V)
  * Returns:
  *   None. The gradients are accumulated in the `act_grads` array of the `in` node.
  */
-void crossentropy_softmax_backward(Node* out, Node* in, u_int16_t* targets, float temperature){
+void crossentropy_softmax_backward(Node* out, Node* in, uint16_t* targets, float temperature){
     size_t B = in->shape[0];
     size_t T = in->shape[1];
     size_t V = in->shape[2];
@@ -55,7 +55,7 @@ void crossentropy_softmax_backward(Node* out, Node* in, u_int16_t* targets, floa
     for (size_t b = 0; b < B; b++){
         for (size_t t = 0; t < T; t++){
             float* probabilities = out->act + b*T*V + t*V;
-            u_int16_t target = targets[b*T + t];
+            uint16_t target = targets[b*T + t];
 
             for (size_t v = 0; v < V; v++){
                 float indicator = (v == target) ? 1.0f : 0.0f;
@@ -84,7 +84,7 @@ void crossentropy_softmax_backward(Node* out, Node* in, u_int16_t* targets, floa
  * Throws:
  *   std::invalid_argument if the probabilities are not valid (i.e., non-negative and summing up to 1).
  */
-u_int16_t sample_token(float* probabilities, size_t length, bool random){
+uint16_t sample_token(float* probabilities, size_t length, bool random){
 
     // Check if probabilities are valid
     float sum = 0.0f;
@@ -99,7 +99,7 @@ u_int16_t sample_token(float* probabilities, size_t length, bool random){
         throw std::invalid_argument("Probabilities must sum up to 1");
     }
 
-    u_int16_t token;
+    uint16_t token;
 
     if (random){
         static std::random_device rd;

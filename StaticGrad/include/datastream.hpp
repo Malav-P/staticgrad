@@ -8,7 +8,7 @@ class DataStream {
     public:
 
         std::fstream* stream;
-        u_int16_t* buffer;
+        uint16_t* buffer;
         int buffersize; // in bytes
 
         explicit DataStream():

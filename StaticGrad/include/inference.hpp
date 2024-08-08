@@ -7,7 +7,7 @@ class Node;
 
 #include <string>
 
-u_int16_t next_token(GPT2*& model,
+uint16_t next_token(GPT2*& model,
                      Node*& out,
                      Node*& in,
                      size_t t);

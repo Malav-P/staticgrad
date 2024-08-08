@@ -8,8 +8,8 @@ void DataStream::init_buffer(int num_tokens){
         delete[] buffer;
     }
     
-    buffer = new u_int16_t[num_tokens];
-    buffersize = num_tokens*sizeof(u_int16_t);
+    buffer = new uint16_t[num_tokens];
+    buffersize = num_tokens*sizeof(uint16_t);
 }
 
 void DataStream::open(const std::string& filePath){
@@ -60,7 +60,7 @@ void DataStream::buffer_to_Node(Node* node, size_t num_tokens){
         throw std::invalid_argument("node is too small to transfer number of requested tokens");
     }
 
-    if (buffersize / sizeof(u_int16_t) < num_tokens){
+    if (buffersize / sizeof(uint16_t) < num_tokens){
         throw std::invalid_argument("buffer is too small to transfer number of requested tokens");
     }
 

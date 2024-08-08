@@ -22,7 +22,7 @@ TEST_F(TokenizerTest, Decode) {
 
     Tokenizer tk = Tokenizer(filename);
 
-    u_int16_t tokenIDs[2] = {0, 1};
+    uint16_t tokenIDs[2] = {0, 1};
     int length = 2;
 
     std::string decoded = tk.decode(tokenIDs, length);
@@ -31,7 +31,7 @@ TEST_F(TokenizerTest, Decode) {
     EXPECT_TRUE(decoded == expected);
 
     // use std::vector container for tokens. this one is for "hello world"
-    std::vector<u_int16_t> tokenids{31373, 995};
+    std::vector<uint16_t> tokenids{31373, 995};
 
     decoded = tk.decode(tokenids);
     EXPECT_TRUE(decoded == "hello world");
@@ -41,7 +41,7 @@ TEST_F(TokenizerTest, eot) {
 
     Tokenizer tk = Tokenizer(filename);
 
-    u_int16_t tokenIDs[1] = {50256};
+    uint16_t tokenIDs[1] = {50256};
     int length = 1;
 
     std::string decoded = tk.decode(tokenIDs, length);
@@ -50,7 +50,7 @@ TEST_F(TokenizerTest, eot) {
     EXPECT_TRUE(decoded == expected);
 
     // use std::vector container for tokens. this one is for the eot token
-    std::vector<u_int16_t> tokenids{50256};
+    std::vector<uint16_t> tokenids{50256};
 
     decoded = tk.decode(tokenids);
     EXPECT_TRUE(decoded == "<|endoftext|>");
@@ -60,7 +60,7 @@ TEST_F(TokenizerTest, Encode) {
     Tokenizer tk = Tokenizer(filename);
 
     std::string str = "hello world";
-    std::vector<u_int16_t> tokenIDs = tk.encode(str);
+    std::vector<uint16_t> tokenIDs = tk.encode(str);
 
     EXPECT_GT(tokenIDs.size(), size_t(0));
 
@@ -78,7 +78,7 @@ TEST_F(TokenizerTest, EdgeCases) {
 
     Tokenizer tk = Tokenizer(filename);
 
-    u_int16_t* invalid_array = nullptr;
+    uint16_t* invalid_array = nullptr;
     int length = 1;
     EXPECT_THROW(tk.decode(invalid_array, length), std::invalid_argument);
 
@@ -100,7 +100,7 @@ TEST_F(TokenizerTest, EncodeDecodeTest) {
     };
 
     for (const auto& str : testStrings) {
-        std::vector<u_int16_t> encoded = tokenizer->encode(str);
+        std::vector<uint16_t> encoded = tokenizer->encode(str);
         std::string decoded = tokenizer->decode(encoded);
         EXPECT_EQ(str, decoded);
     }
