@@ -2,6 +2,7 @@
 #include "gpt2.hpp"
 #include "test_common.hpp"
 #include <random>
+#include <chrono>
 
 using namespace std;
 

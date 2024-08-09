@@ -4,7 +4,8 @@
 #include "interface.hpp"
 #include "utils.hpp"
 
-std::string PREFIX = REPO_PREFIX;
+const std::string PREFIX = REPO_PREFIX;
+
 
 
 /**

@@ -2,9 +2,11 @@
 #define TEST_COMMON_HPP
 
 #include <vector>
+#include <cstring>
+#include <cmath>
+
+using namespace std;
 class Node;
-
-
 
 void fillArrayWithRandom(float* arr, int size);
 void fillArrayWithOnes(float* arr, int size);

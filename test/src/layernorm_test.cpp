@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "classes.hpp"
 #include "test_common.hpp"
+#include <cstring>
 
 
 class LayerNormTest : public ::testing::Test {

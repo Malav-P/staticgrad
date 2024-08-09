@@ -1,4 +1,5 @@
 #include "node.hpp"
+#include <cstring>
 
 Node::Node():
 act(nullptr),

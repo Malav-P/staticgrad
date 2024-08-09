@@ -1,5 +1,7 @@
 #include "classes.hpp"
 #include <cmath>
+#include <cfloat>
+#include <cstring>
 #include <stdexcept>
 #include <iostream>
 
@@ -1141,7 +1143,7 @@ void Softmax::forward(Node* out, Node* in){
             float exp_sum = 0.0f;
             float exp_val = 0.0f;
             for (size_t v = 0; v < V; v++){
-                exp_val = std::expf((bt_arr[v] - maxval)/temperature);
+                exp_val = expf((bt_arr[v] - maxval)/temperature);
                 out_bt_arr[v] = exp_val;
                 exp_sum += exp_val;
             }

@@ -1,6 +1,7 @@
 #ifndef GPT2_HPP
 #define GPT2_HPP
 
+#include <string>
 #include "classes.hpp"
 
 // get number of activations needed for forward pass
