@@ -98,7 +98,7 @@ TEST_F(UtilsTest, sample_token) {
 
     EXPECT_NO_THROW(token = sample_token(probabilities, length));
 
-    int* counts = new int[length];
+    int* counts = new int[length]();
     for (int i = 0; i < 10000; i++){
         token = sample_token(probabilities, 4, true);
         counts[token] += 1;

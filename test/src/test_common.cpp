@@ -27,8 +27,8 @@ void setup_node(Node* node, std::vector<size_t> shape_){
     // Set up the output node with shape (1, 3, 1)
     delete[] node->act;
     delete[] node->act_grads;
-    node->act = new float[numel];
-    node->act_grads = new float[numel];
+    node->act = new float[numel]();
+    node->act_grads = new float[numel]();
     node->shape = shape_;
     node->size = numel;
 }

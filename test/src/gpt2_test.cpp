@@ -5,6 +5,7 @@
 #include <chrono>
 
 using namespace std;
+std::string PREFIX = REPO_PREFIX;
 
 
 class GPT2Test : public ::testing::Test {
@@ -77,8 +78,8 @@ TEST_F(GPT2Test, Forward) {
 
     size_t num_act = gpt2_num_acts(B, T, C, L, V);
 
-    float* acts = new float[num_act];
-    float* grad = new float[num_act];
+    float* acts = new float[num_act]();
+    float* grad = new float[num_act]();
 
     Node* in = new Node();
     in->act = acts;
@@ -153,8 +154,8 @@ TEST_F(GPT2Test, Backward) {
 
     size_t num_act = gpt2_num_acts(B, T, C, L, V);
 
-    float* acts = new float[num_act];
-    float* grad = new float[num_act];
+    float* acts = new float[num_act]();
+    float* grad = new float[num_act]();
 
     Node* in = new Node();
     in->act = acts;
@@ -297,7 +298,8 @@ TEST_F(GPT2Test, load_weights) {
     GPT2* model = nullptr;
     model = new GPT2(C, L, V, maxT, NH);
 
-    std::string filepath = "/Users/malavpatel/Coding_Projects/StaticGrad/gpt2_python/bin/gpt2_weights.bin";
+
+    std::string filepath = PREFIX + "bin/gpt2_weights.bin";
 
     EXPECT_NO_THROW(model->load_weights(filepath));
 

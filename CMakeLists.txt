@@ -97,6 +97,8 @@ foreach(test ${TESTS})
         add_executable(${test} ${test_src} $<TARGET_OBJECTS:test_common>)
         target_link_libraries(${test} StaticGrad ${GTEST_LIBRARIES} ${LIBS} ${BLAS_LIBRARIES})
         set_target_properties(${test} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${BIN_DIR})
+        target_compile_definitions(${test} PRIVATE REPO_PREFIX="${REPO_PREFIX}")
+
     else()
         message(WARNING "Test source file ${test_src} does not exist. Skipping ${test}.")
     endif()

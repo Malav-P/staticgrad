@@ -81,7 +81,7 @@ TEST_F(AttentionTest, Forward) {
                 // get output vector
                 float* out_act = out->act + b * T * C + t * C + nh * head_size;
 
-				float* expected = new float[head_size];
+				float* expected = new float[head_size]();
                 for (size_t t2 = 0; t2 <= t; t2++){
                     // find value vector for t2 token
                     float* v_t2 = in->act + b * T * 3*C + t2 * 3*C + C + C + nh * head_size;

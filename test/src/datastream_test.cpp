@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "datastream.hpp"
 
+const std::string PREFIX = REPO_PREFIX;
+
 class DataStreamTest : public ::testing::Test {
     protected:
         DataStream* ds;
@@ -37,7 +39,7 @@ TEST_F(DataStreamTest, createDataStream) {
  */
 TEST_F(DataStreamTest, openfile) {
 
-    std::string filepath = "/Users/malavpatel/Coding_Projects/StaticGrad/gpt2_python/bin/tinystories.bin";
+    std::string filepath = PREFIX + "bin/tinyshakespeare.bin";
 
     EXPECT_NO_THROW(ds->open(filepath));
     EXPECT_TRUE(ds->stream != nullptr);
@@ -68,7 +70,7 @@ TEST_F(DataStreamTest, openinvalidfile) {
  */
 TEST_F(DataStreamTest, tinystories) {
 
-    std::string filepath = "/Users/malavpatel/Coding_Projects/StaticGrad/gpt2_python/bin/tinystories.bin";
+    std::string filepath = PREFIX + "bin/tinystories.bin";
     ds->open(filepath);
 
     ds->init_buffer(64);
@@ -84,7 +86,7 @@ TEST_F(DataStreamTest, tinystories) {
 
 TEST_F(DataStreamTest, tinyshakespeare) {
 
-    std::string filepath = "/Users/malavpatel/Coding_Projects/StaticGrad/gpt2_python/bin/tinyshakespeare.bin";
+    std::string filepath = PREFIX + "bin/tinyshakespeare.bin";
     ds->open(filepath);
 
     ds->init_buffer(64);
