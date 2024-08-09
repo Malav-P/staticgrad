@@ -4,6 +4,7 @@
 #include "interface.hpp"
 #include "utils.hpp"
 
+const std::string PREFIX = REPO_PREFIX;
 
 
 
@@ -51,7 +52,6 @@ void setup(GPT2*& model,
 
     model = new GPT2(C, L, V, maxT, NH);
 
-    std::string PREFIX = "/Users/malavpatel/Coding_Projects/StaticGrad/gpt2_python/";
 
     if (pretrained){
         std::string fp_weights = PREFIX + "bin/gpt2_weights.bin";

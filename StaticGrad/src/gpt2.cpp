@@ -1,5 +1,7 @@
 #include "gpt2.hpp"
 #include <fstream>
+#include <cstring>
+#include <cmath>
 
 /**
  * @brief Calculate the number of external activations required for a given batch size, sequence length, and model configuration.
@@ -173,7 +175,7 @@ GPT2::~GPT2(){
  * @brief Sets gradients of params to zero.
  */
 void GPT2::zero_grad(){
-    std::memset(grad, 0, num_params * sizeof(float));
+    memset(grad, 0, num_params * sizeof(float));
 }
 
 /**

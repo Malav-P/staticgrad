@@ -2,6 +2,8 @@
 #include <random>
 #include <fstream>
 #include <iostream>
+#include <cmath>
+#include <algorithm>
 
 
 
@@ -28,7 +30,7 @@ void crossentropy_forward(Node* out, Node* in, uint16_t* targets){ // (B, T, V) 
             float* probabilities = in->act + b*T*V + t*V;
             uint16_t target = targets[b*T + t];
 
-            out->act[b*T + t] = -std::logf(probabilities[target]);
+            out->act[b*T + t] = -logf(probabilities[target]);
 
         }
     }

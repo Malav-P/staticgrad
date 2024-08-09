@@ -3,6 +3,9 @@
 cmake_minimum_required(VERSION 3.10)
 project(StaticGrad)
 
+message(STATUS "This is the source dir: ${CMAKE_SOURCE_DIR}")
+set(REPO_PREFIX "${CMAKE_SOURCE_DIR}/gpt2_python/")
+
 # Compiler settings
 # Find clang++ and g++ in the system PATH
 find_program(CLANGXX_EXECUTABLE NAMES clang++)
@@ -64,14 +67,15 @@ endif()
 # Add include directories
 include_directories(${INCDIR} ${TEST_INCDIR} ${GTEST_INCLUDE_DIRS} )
 
-
-
 # Add source files
 file(GLOB SRCS ${SRCDIR}/*.cpp)
 file(GLOB TEST_SRCS ${TEST_SRCDIR}/*.cpp)
 
 # Define library
 add_library(StaticGrad STATIC ${SRCS})
+# Define it as a preprocessor definition
+target_compile_definitions(StaticGrad PRIVATE REPO_PREFIX="${REPO_PREFIX}")
+
 # Link StaticGrad with the BLAS libraries
 target_link_libraries(StaticGrad PRIVATE ${BLAS_LIBRARIES})
 

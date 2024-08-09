@@ -45,7 +45,7 @@ TEST_F(UtilsTest, crossentropyforward) {
 
     EXPECT_NO_THROW(crossentropy_forward(out, in, targets));
 
-    EXPECT_FLOAT_EQ(out->act[0], -std::logf(softmax_out[targets[0]]));
+    EXPECT_FLOAT_EQ(out->act[0], -logf(softmax_out[targets[0]]));
 }
 
 /**

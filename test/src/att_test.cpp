@@ -132,7 +132,7 @@ TEST_F(AttentionTest, Backward){
 	// ------- Begin testing backwards ---- 
 
 	fillArrayWithOnes(out->act_grads, out->size);
-	std::memset(in->act_grads, 0, in->size * sizeof(float));
+	memset(in->act_grads, 0, in->size * sizeof(float));
 
 	for (size_t i = 0 ; i < in->size; i++){
 		EXPECT_FLOAT_EQ(in->act_grads[i], 0.0f);

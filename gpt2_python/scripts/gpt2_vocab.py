@@ -12,7 +12,8 @@ def write_gpt2_vocab():
 
     # Check if the output path is a valid directory
     if not os.path.isdir(os.path.dirname(output_path)):
-        raise ValueError("Invalid output directory")
+        os.makedirs(os.path.dirname(output_path), exist_ok = True)
+        # raise ValueError(f"Invalid output path: {output_path}")
 
 
     n = encoder.max_token_value

@@ -2,6 +2,7 @@
 #define NODE_HPP
 
 #include <vector>
+using namespace std;
 
 class Node {
     public:

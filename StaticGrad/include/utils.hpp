@@ -2,6 +2,7 @@
 #define UTILS_HPP
 
 #include "node.hpp"
+#include <cstdint>
 
 void crossentropy_forward(Node* out, Node* in, uint16_t* targets);
 
