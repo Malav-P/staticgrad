@@ -1,4 +1,3 @@
-#include "inference.hpp"
 #include "interface.hpp"
 
 int main(int argc, char **argv) {

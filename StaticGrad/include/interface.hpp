@@ -2,12 +2,20 @@
 #define INTERFACE_HPP
 
 #include <cstddef>
+#include <string>
+
 
 class GPT2;
 class DataStream;
 class Tokenizer;
 class Activation;
 class Node;
+
+void yap(GPT2*& model,
+         Tokenizer*& tk,
+         Node*& out,
+         Node*& in,
+         std::string start);
 
 
 void setup(GPT2*& model,
