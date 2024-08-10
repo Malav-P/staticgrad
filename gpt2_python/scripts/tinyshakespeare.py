@@ -1,10 +1,9 @@
 import tiktoken
+from transformers import GPT2Tokenizer
 import requests
 import numpy as np
 import os
 import tempfile
-from tqdm import tqdm
-from transformers import GPT2Tokenizer
 import argparse
 
 
@@ -12,15 +11,10 @@ import argparse
 # and allows faster processing
 
 
-
-
 def tokenize_tinyshakespeare(tokenizer = "tiktoken"):
     url = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
     
-    with tempfile.TemporaryDirectory() as tmpdir:
-        # Define the path to save the tarball
-        download_file = os.path.join(tmpdir, "tinyshakespeare.txt")
-        
+    with tempfile.TemporaryDirectory() as tmpdir:        
         # Download the tarball
         response = requests.get(url, stream=True)
         
@@ -58,14 +52,18 @@ if __name__ == "__main__":
     # Create an ArgumentParser object
     parser = argparse.ArgumentParser(description="Process command-line arguments.")
     
-    # Define a positional argument that captures the first argument as a string
-    parser.add_argument('first_argument', type=str, help="The first argument as a string")
-    
+    parser.add_argument('--tokenizer', 
+                        choices=['tiktoken', 'transformers'], 
+                        default='tiktoken',
+                        help='Enable verbose output (default: False)')
+
     # Parse the arguments
     args = parser.parse_args()
     
-    # Access the first argument
-    tokenizer = args.first_argument
+    if args.tokenizer:
+        tokenizer = args.tokenizer
+    else:
+        tokenizer = "tiktoken"
 
     tokenize_tinyshakespeare(tokenizer=tokenizer)
         

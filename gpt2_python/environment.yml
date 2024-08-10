@@ -1,0 +1,13 @@
+name: staticgrad_python  # Replace 'myenv' with your desired environment name
+channels:
+  - defaults
+  - conda-forge 
+dependencies:
+  - python 
+  - numpy
+  - transformers
+  - pytorch
+  - tqdm
+  - pip
+  - pip:
+    - tiktoken
