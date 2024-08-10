@@ -32,7 +32,7 @@ class Activation {
         size_t T; // current sequence length
         size_t V; // vocab size
 
-        Activation(size_t B_, size_t T_, size_t C_, size_t L_, size_t V_);
+        Activation(const size_t B_, const size_t T_, const size_t C_, const size_t L_, const size_t V_);
         ~Activation();
 
         void zero_grad();

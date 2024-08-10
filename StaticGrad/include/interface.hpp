@@ -15,8 +15,17 @@ void yap(GPT2*& model,
          Tokenizer*& tk,
          Node*& out,
          Node*& in,
-         std::string start);
+         const std::string start);
 
+void setup_model(GPT2*& model, const bool pretrained);
+void setup_tokenizer(Tokenizer*& tk);
+void setup_datastream(DataStream*& ds, const size_t numtokens);
+void setup_activations(Activation*& activations,
+                       Node*& out,
+                       Node*& in, 
+                       const size_t B,
+                       const size_t T,
+                       GPT2*& model);
 
 void setup(GPT2*& model,
            DataStream*& ds,
@@ -24,9 +33,9 @@ void setup(GPT2*& model,
            Activation*& activations,
            Node*& out,
            Node*& in,
-           size_t B,
-           size_t T,
-           bool pretrained = false);
+           const size_t B,
+           const size_t T,
+           const bool pretrained = false);
 
 void tear_down(GPT2*& model,
                DataStream*& ds,
@@ -36,7 +45,7 @@ void tear_down(GPT2*& model,
                Node*& in);
 
             
-void train(int max_batches);
+void train(const int max_batches);
 
 
 #endif //INTERFACE_HPP

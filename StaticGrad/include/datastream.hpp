@@ -24,13 +24,13 @@ class DataStream {
                 this->open(filepath);
             }
 
-        void init_buffer(int num_tokens);
+        void init_buffer(const int num_tokens);
 
         void open(const std::string& filePath);
         void close();
 
         void load_buffer();
-        void buffer_to_Node(Node* node, size_t num_tokens);
+        void buffer_to_Node(Node* node, const size_t num_tokens);
 
         ~DataStream(){
             close();

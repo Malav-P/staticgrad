@@ -44,7 +44,7 @@ Tokenizer::Tokenizer(const std::string& filename){
  * @throw `std::invalid_argument` If the `tokenIDs` pointer is null.
  * @throw `std::out_of_range` If any token ID in the array is invalid (out of the range of the vocabulary).
  */ 
-std::string Tokenizer::decode(uint16_t* tokenIDs, int length) {
+std::string Tokenizer::decode(const uint16_t* tokenIDs, const int length) {
     if (tokenIDs == nullptr){
         throw std::invalid_argument("input array is null");
     }

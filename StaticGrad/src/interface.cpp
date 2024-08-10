@@ -21,7 +21,7 @@ const std::string PREFIX = REPO_PREFIX;
 uint16_t next_token(GPT2*& model,
                      Node*& out,
                      Node*& in,
-                     size_t t){
+                     const size_t t){
 
     if (t == 0){
         throw std::runtime_error("t cannot be zero");
@@ -49,7 +49,7 @@ void yap(GPT2*& model,
          Tokenizer*& tk,
          Node*& out,
          Node*& in,
-         std::string start){
+         const std::string start){
 
     // clear kv cache
     model->clear_kv_cache();
@@ -106,6 +106,56 @@ void yap(GPT2*& model,
 }
 
 
+void setup_model(GPT2*& model, const bool pretrained){
+    if (model != nullptr){
+        throw std::runtime_error("passed model pointer must be null");
+    }
+
+    const size_t C = 768; // embedding dimension
+    const size_t L = 12; // number of transformer blocks
+    const size_t V = 50257; // vocab size
+    const size_t maxT = 1024; // max sequence length
+    const size_t NH = 12; // number of attention heads
+
+    model = new GPT2(C, L, V, maxT, NH);
+
+    if (pretrained){
+        std::string fp_weights = PREFIX + "bin/gpt2_weights.bin";
+        model->load_weights(fp_weights);
+    }
+}
+
+void setup_tokenizer(Tokenizer*& tk){
+    if (tk != nullptr){
+        throw std::runtime_error("passed tokenizer pointer must be null");
+    }
+
+    std::string fp_tk = PREFIX + "bin/gpt2_vocab.bin";
+    tk = new Tokenizer(fp_tk);
+}
+
+void setup_datastream(DataStream*& ds, const size_t numtokens){
+    if (ds != nullptr){
+        throw std::runtime_error("passed datastream pointer must be null");
+    }
+    std::string fp_ds = PREFIX + "bin/tinyshakespeare.bin";
+    ds = new DataStream(fp_ds);
+    ds->init_buffer(numtokens + 1); // +1 to include necessary target tokens for training
+}
+
+void setup_activations(Activation*& activations,
+                       Node*& out,
+                       Node*& in, 
+                       const size_t B,
+                       const size_t T,
+                       GPT2*& model){
+    activations = new Activation(B, T, model->C, model->L, model->V);
+    out = new Node();
+    in = new Node();
+    activations->point_nodes(out, in);
+}
+
+
 
 /**
 * Allocates and initializes the GPT-2 model, data stream, tokenizer, activations, and nodes for a specified batch size and sequence length.
@@ -134,52 +184,25 @@ void setup(GPT2*& model,
            Activation*& activations,
            Node*& out,
            Node*& in,
-           size_t B,
-           size_t T,
-           bool pretrained) 
+           const size_t B,
+           const size_t T,
+           const bool pretrained) 
 {
-    
-    if ((model != nullptr) || (ds != nullptr) || (tk != nullptr) || (activations != nullptr) || (out != nullptr) || (in != nullptr)){
+    if ((activations != nullptr) || (out != nullptr) || (in != nullptr)){
         throw std::invalid_argument("passed pointers must be empty (nullptr)");
     }
 
-
-    size_t C = 768; // embedding dimension
-    size_t L = 12; // number of transformer blocks
-    size_t V = 50257; // vocab size
-    size_t maxT = 1024; // max sequence length
-    size_t NH = 12; // number of attention heads
-
-    model = new GPT2(C, L, V, maxT, NH);
-
-
-    if (pretrained){
-        std::string fp_weights = PREFIX + "bin/gpt2_weights.bin";
-        model->load_weights(fp_weights);
-    }
-
-    std::string fp_ds = PREFIX + "bin/tinyshakespeare.bin";
-    ds = new DataStream(fp_ds);
-    ds->init_buffer(B*T + 1); // +1 to include necessary target tokens for training
-
-    std::string fp_tk = PREFIX + "bin/gpt2_vocab.bin";
-    tk = new Tokenizer(fp_tk);
-
-    activations = new Activation(B, T, model->C, model->L, model->V);
-
-    out = new Node();
-    in = new Node();
-    activations->point_nodes(out, in);
-
-
-    // + L*2*B*T + L*NH*B*T*(T+1) + 2*B*T
+    setup_model(model, pretrained);
+    setup_datastream(ds, B*T);
+    setup_tokenizer(tk);
+    setup_activations(activations, out, in, B, T, model);
 
 
     std::cout << "GPT-2 Small" << std::endl;
-    std::cout << "max seq len: " << maxT << std::endl;
-    std::cout << "embedding dimension: " << C << std::endl;
-    std::cout << "vocab size: " << V << std::endl;
-    std::cout << "num layers: " << L << std::endl;
+    std::cout << "max seq len: " << model->maxT << std::endl;
+    std::cout << "embedding dimension: " << model->C << std::endl;
+    std::cout << "vocab size: " << model->V << std::endl;
+    std::cout << "num layers: " << model->L << std::endl;
     std::cout << "num params: " << model->num_params << std::endl;
     std::cout << "allocated batch size: " << B << std::endl;
     std::cout << "allocated sequence length: " << T << std::endl;
@@ -187,6 +210,8 @@ void setup(GPT2*& model,
     std::cout << "\n";
 
 }
+
+
 
 
 /**
@@ -228,7 +253,7 @@ void tear_down(GPT2*& model,
     delete model;
     model = nullptr;
 
-    std::cout << "\nteardown complete, memory deallocated" << std::endl;
+    // std::cout << "\nteardown complete, memory deallocated" << std::endl;
 }
 
 float mean_loss(Node* loss_node){
@@ -253,7 +278,7 @@ float mean_loss(Node* loss_node){
 * 
 * @note The GPT-2 model, data stream, tokenizer, in, and out nodes are properly initialized through the `setup` function
 */
-void train(int max_batches){
+void train(const int max_batches){
     // setup model
     GPT2* model = nullptr;
     DataStream* ds = nullptr;

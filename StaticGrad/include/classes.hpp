@@ -4,8 +4,8 @@
 #include "node.hpp"
 
 
-void shift(Node* out, Node* in, std::vector<size_t> shape_);
-void shift_back(Node* out, Node* in, std::vector<size_t> shape_);
+void shift(Node* out, Node* in, const std::vector<size_t> shape_);
+void shift_back(Node* out, Node* in, const std::vector<size_t> shape_);
 
 class Operation {
     public :
@@ -171,7 +171,7 @@ class TransformerBlock : public Operation {
         RowAdd* ra4;
         Add* res2;
 
-        TransformerBlock(float* params_, float* grad_, size_t C, size_t NH); // constructor
+        TransformerBlock(float* params_, float* grad_, const size_t C, const size_t NH); // constructor
         ~TransformerBlock(); // destructor
 
         

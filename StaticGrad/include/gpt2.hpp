@@ -5,10 +5,10 @@
 #include "classes.hpp"
 
 // get number of activations needed for forward pass
-size_t gpt2_num_acts(size_t B, size_t T, size_t C, size_t L, size_t V);
+size_t gpt2_num_acts(const size_t B, const size_t T, const size_t C, const size_t L, const size_t V);
 
 // get number of parameters to malloc for gpt2 parameters
-size_t gpt2_memrequirement(size_t C, size_t L, size_t vocab_size, size_t max_seqlen);
+size_t gpt2_memrequirement(const size_t C, const size_t L, const size_t vocab_size, const size_t max_seqlen);
 
 class GPT2 {
     public:
@@ -21,9 +21,9 @@ class GPT2 {
         ~GPT2();
 
         void zero_grad();
-        void set_temperature(float temp);
+        void set_temperature(const float temp);
         void load_weights(const std::string& fname);
-        void update(int t); 
+        void update(const int t); 
 
         void forward(Node* out, Node* in);
         void backward(Node* out, Node* in);

@@ -25,8 +25,9 @@ int main(int argc, char **argv) {
     size_t T = seqlen;
     bool pretrained = true;
 
-    // malloc and point memory
-    setup(model, ds, tk, activations, out, in , B, T, pretrained);
+    setup_model(model, pretrained);
+    setup_tokenizer(tk);
+    setup_activations(activations, out, in, B, T, model);
 
     // autoregressive generation
     yap(model, tk, out, in, start);

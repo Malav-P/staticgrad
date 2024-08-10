@@ -18,7 +18,7 @@
  * Returns:
  *   None. The computed loss is stored in the `act` array of the `out` node.
  */
-void crossentropy_forward(Node* out, Node* in, uint16_t* targets){ // (B, T, V) -> (B, T)
+void crossentropy_forward(Node* out, Node* in, const uint16_t* targets){ // (B, T, V) -> (B, T)
 
     size_t B = in->shape[0];
     size_t T = in->shape[1];
@@ -49,7 +49,7 @@ void crossentropy_forward(Node* out, Node* in, uint16_t* targets){ // (B, T, V) 
  * Returns:
  *   None. The gradients are accumulated in the `act_grads` array of the `in` node.
  */
-void crossentropy_softmax_backward(Node* out, Node* in, uint16_t* targets, float temperature){
+void crossentropy_softmax_backward(Node* out, Node* in, const uint16_t* targets, const float temperature){
     size_t B = in->shape[0];
     size_t T = in->shape[1];
     size_t V = in->shape[2];
@@ -86,7 +86,7 @@ void crossentropy_softmax_backward(Node* out, Node* in, uint16_t* targets, float
  * Throws:
  *   std::invalid_argument if the probabilities are not valid (i.e., non-negative and summing up to 1).
  */
-uint16_t sample_token(float* probabilities, size_t length, bool random){
+uint16_t sample_token(const float* probabilities, const size_t length, const bool random){
 
     // Check if probabilities are valid
     float sum = 0.0f;

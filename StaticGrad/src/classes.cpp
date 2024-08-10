@@ -23,7 +23,7 @@
  * @note
  *   - Returns nothing. The pointers are shifted accordingly.
  */
-void shift(Node* out, Node* in, std::vector<size_t> shape_){
+void shift(Node* out, Node* in, const std::vector<size_t> shape_){
 
     in->act = out->act;
     in->act_grads = out->act_grads;
@@ -56,7 +56,7 @@ void shift(Node* out, Node* in, std::vector<size_t> shape_){
  * @note
  *   - Returns nothing. The pointers are shifted accordingly.
  */
-void shift_back(Node* out, Node* in, std::vector<size_t> shape_){
+void shift_back(Node* out, Node* in, const std::vector<size_t> shape_){
 
     out->act = in->act;
     out->act_grads = in->act_grads;
@@ -193,7 +193,7 @@ void Encoder::backward(Node* out, Node* in){
  * @note 
  * - The constructor dynamically allocates memory for various internal nodes and layers. Hence, it is crucial to handle exceptions during construction.
  */
-TransformerBlock::TransformerBlock(float* params_, float* grad_, size_t C, size_t NH):
+TransformerBlock::TransformerBlock(float* params_, float* grad_, const size_t C, const size_t NH):
     Operation(params_, grad_),
     res1_node(nullptr),
     res2_node(nullptr) {

@@ -2,7 +2,7 @@
 #include <memory>
 #include <iostream>
 
-void DataStream::init_buffer(int num_tokens){
+void DataStream::init_buffer(const int num_tokens){
 
     if (buffer != nullptr){
         delete[] buffer;
@@ -55,7 +55,7 @@ void DataStream::load_buffer(){
 }
 
 
-void DataStream::buffer_to_Node(Node* node, size_t num_tokens){
+void DataStream::buffer_to_Node(Node* node, const size_t num_tokens){
     if (node->size < num_tokens){
         throw std::invalid_argument("node is too small to transfer number of requested tokens");
     }

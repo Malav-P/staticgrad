@@ -16,7 +16,12 @@
  * @note This figure does not include the internal activations for the mean (B*T) and rstd (B*T) used by layernorms and the internal pre_softmax and post_softmax buffers used
  * in an attention block.
  */
-size_t gpt2_num_acts(size_t B, size_t T, size_t C, size_t L, size_t V){
+size_t gpt2_num_acts(const size_t B,
+                     const size_t T,
+                     const size_t C,
+                     const size_t L,
+                     const size_t V)
+{
     size_t num_acts = B*T;
 
     // encoder (B, T) -> (B, T, C)
@@ -46,7 +51,11 @@ size_t gpt2_num_acts(size_t B, size_t T, size_t C, size_t L, size_t V){
  * @param max_seqlen Maximum sequence length.
  * @return The number of parameters in the model
  */
-size_t gpt2_memrequirement(size_t C, size_t L, size_t vocab_size, size_t max_seqlen){
+size_t gpt2_memrequirement(const size_t C,
+                           const size_t L,
+                           const size_t vocab_size,
+                           const size_t max_seqlen)
+{
 
     size_t num_params = 0;
 
@@ -100,11 +109,11 @@ size_t gpt2_memrequirement(size_t C, size_t L, size_t vocab_size, size_t max_seq
   * 
   * @throws `std::runtime_error` if parameter allocation is done incorrectly
   */
-GPT2::GPT2(size_t C_,
-           size_t L_,
-           size_t V_,
-           size_t maxT_,
-           size_t NH_):
+GPT2::GPT2(const size_t C_,
+           const size_t L_,
+           const size_t V_,
+           const size_t maxT_,
+           const size_t NH_):
     C(C_),
     L(L_),
     V(V_),
@@ -183,7 +192,7 @@ void GPT2::zero_grad(){
  *
  * @param temp The temperature value to set.
  */
-void GPT2::set_temperature(float temp){
+void GPT2::set_temperature(const float temp){
     softmax->set_temperature(temp);
 }
 
@@ -193,7 +202,7 @@ void GPT2::set_temperature(float temp){
  * @param t timestep, a.k.a. the exponent for beta1 and beta2 in the adam update.
  * 
  */
-void GPT2::update(int t){
+void GPT2::update(const int t){
     for (size_t i = 0; i < num_params; i++){
         float g_ = grad[i];
 

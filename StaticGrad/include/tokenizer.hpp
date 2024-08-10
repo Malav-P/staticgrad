@@ -15,7 +15,7 @@ class Tokenizer {
 
         Tokenizer(const std::string& filename);
 
-        std::string decode(uint16_t* tokenIDs, int length);
+        std::string decode(const uint16_t* tokenIDs, const int length);
         std::string decode(const std::vector<uint16_t>& tokenIDs);
 
         std::vector<uint16_t> encode(const std::string& str);
