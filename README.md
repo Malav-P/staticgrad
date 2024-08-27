@@ -12,9 +12,9 @@ conda env create -f gpt2_python/environment.yml
 conda activate staticgrad_python
 
 python3 gpt2_python/scripts/gpt2_vocab.py  # get vocab
-python3 gpt2_python/scripts/gpt2_python.py # get weights
+python3 gpt2_python/scripts/gpt2_python.py --get_weights # get weights
 
-python3 gpt2_python/scripts/tinyshakespeare.py # download and tokenize tinyshakespeare dataset
+python3 gpt2_python/scripts/tinyshakespeare.py # download and tokenize tinyshakespeare dataset, run this if you plan to run training script
 
 conda deactivate
 ```
