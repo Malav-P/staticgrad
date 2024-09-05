@@ -1,3 +1,8 @@
+## Overview
+This repository contains an implementation of the GPT2 architecture from scratch in C++. We have some auxiliary python code that does the following:
+- downloads weights in order to load a pretrained model using this source code
+- downloads and tokenizes datasets for training / finetuning
+
 ## Installation
 ```bash
 git clone https://github.com/Malav-P/staticgrad.git
