@@ -18,7 +18,7 @@ void DataStream::open(const std::string& filePath){
         stream->open(filePath, std::ios::in | std::ios::binary);
         // Check if the file was opened successfully
         if (!stream->is_open()) {
-            throw std::runtime_error("error opening binary file\n");
+            throw std::runtime_error("error opening binary file: " + filePath + "\n");
         }
         
     }

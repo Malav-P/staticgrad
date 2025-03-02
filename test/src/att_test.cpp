@@ -4,36 +4,81 @@
 
 
 class AttentionTest : public ::testing::Test {
- protected:
-  void SetUp() override {
-    // Common setup code here
-    B = 2;
-    T = 3;
-    C = 768;
-    maxT = 1024;
+    protected:
+     void SetUp() override {
+       // Default values, can be overridden in test cases
+       SetDimensions(2, 3, 768);
+     }
+   
+     void TearDown() override {
+       teardown_node(out);
+       teardown_node(in);
+     }
+   
+     void SetDimensions(size_t b, size_t t, size_t c) {
+       B = b;
+       T = t;
+       C = c;
+       maxT = 1024;
+   
+       in = new Node();
+       setup_node(in, {B, T, 3*C});
+   
+       out = new Node();
+       setup_node(out, {B, T, C});
+     }
+   
+     size_t B;
+     size_t T;
+     size_t C;
+     size_t maxT;
+   
+     Node* in;
+     Node* out;
+   };
+   
+TEST_F(AttentionTest, CustomDimensionsTest) {
+    SetDimensions(4, 5, 512); // Custom dimensions for this test
+    
+    EXPECT_EQ(B, 4);
+    EXPECT_EQ(T, 5);
+    EXPECT_EQ(C, 512);
+}
 
+TEST_F(AttentionTest, Forward2) {
+    SetDimensions(1, 2, 4);
 
-    in = new Node();
-    setup_node(in, {B, T, 3*C});
+    Attention* att = new Attention(1);
 
-    out = new Node();
-    setup_node(out, {B, T, C});
+	// fill query, key, value
+	for (size_t b = 0; b < B; b++){
+		for (size_t t = 0; t < T; t++){
+			for (size_t i = 0; i < C; i++){
+				// fill query
+				in->act[b*T*3*C + t*3*C + i] = 1.0f / C * (i+1) * (t+1);
 
-  }
+				// fill key
+				in->act[b*T*3*C + t*3*C + C + i] = 2.0f / C * (i+1) * (t+1);
 
-  void TearDown() override {
-    teardown_node(out);
-    teardown_node(in);
-  }
+				// fill value
+				in->act[b*T*3*C + t*3*C + C + C + i] = 3.0f / C;
+			}
+		}
+	}
 
-  size_t B;
-  size_t T;
-  size_t C;
-  size_t maxT;
+    att->forward(out, in);
 
-  Node* in;
-  Node* out;
-};
+    // test raw attention scores
+    float expected[3] = {15.0f / 8.0f , 15.0f / 4.0f, 15.0f / 2.0f};
+    
+    float* pre_softmax_bth = att->buffer;
+
+    for (size_t i=0; i < 3; i++){
+        EXPECT_FLOAT_EQ(expected[i], pre_softmax_bth[i]);
+    }
+
+    delete att;
+}
 
 TEST_F(AttentionTest, Forward) {
 	size_t num_heads = 12;
@@ -110,7 +155,6 @@ TEST_F(AttentionTest, Forward) {
 	delete att;
 }
 
-// TODO Test backward pass
 
 TEST_F(AttentionTest, Backward){
 
