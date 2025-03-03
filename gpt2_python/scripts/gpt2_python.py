@@ -164,7 +164,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--get_weights', action='store_true', help='Extract and store GPT-2 weights')
     parser.add_argument('--modules', action='store_true', help='GPT2 Modules')
-    parser.add_argument('--intermediate_states', action='store_true', help='Print out intermediate states')
+    parser.add_argument('--get_logits',
+                        type=str,
+                        nargs="?",
+                        const="hello world",
+                        help='Store logits for a sample input, <your text>. Defaults to <hello world>')
     parser.add_argument('--yap', action='store_true', help='Autoregressive generation of text')
 
     args = parser.parse_args()
@@ -173,14 +177,20 @@ def main():
 
     if args.get_weights:
         get_weights(model)
-    if args.intermediate_states:
-        model.set_hook("transformer.h.0.ln_1")  # hook to the first residual layer
-        prompt = "There was a hurricane"
+    if args.get_logits:
+        model.set_hook("lm_head")  # hook to the language modeling head
+        prompt = args.get_logits
 
         model_inputs = tokenizer(prompt, return_tensors='pt').to("cpu")
         _ = model(**model_inputs)
-        intermediate_states = model.get_intermediate_states()
-        print(intermediate_states[0][0, 0, :4])  
+        logits = model.get_intermediate_states()
+        print("Input tokens: ", model_inputs["input_ids"])
+        base_path = os.path.dirname(os.path.dirname(__file__))
+
+        logits_path = os.path.join(base_path, f"bin/{prompt.replace(" ", "_")}_logits.bin")
+        logits[0][0, -1, :].detach().numpy().tofile(logits_path) 
+        print(f"Wrote logits of prompt <{prompt}> to {logits_path}")
+
     if args.modules:
         print_modules(model)
     if args.yap:
