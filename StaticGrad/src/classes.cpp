@@ -42,7 +42,6 @@ void shift(Node* out, Node* in, const std::vector<size_t> shape_){
     }
 
     out->size = numel;
-
 }
 
 /**

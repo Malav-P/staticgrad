@@ -5,7 +5,8 @@ Node::Node():
 act(nullptr),
 act_grads(nullptr),
 shape({0}),
-size(0){}
+size(0),
+current_T(0){}
 
 Activation::Activation(const size_t B_,
                        const size_t T_,
@@ -62,9 +63,11 @@ void Activation::point_nodes(Node* out, Node* in)
     in->act_grads = act_grads;
     in->shape = {B, T};
     in->size = B*T;
+    in->current_T = T;
 
     out->act = act + size - B*T*V;
     out->act_grads = act_grads + size - B*T*V;
     out->shape = {B, T, V};
     out->size = B*T*V;
+    out->current_T = T;
 }

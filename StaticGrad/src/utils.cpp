@@ -118,3 +118,16 @@ uint16_t sample_token(const float* probabilities, const size_t length, const boo
     return token;
     
 }
+
+float mean_loss(Node* loss_node){
+    float m_loss = 0.0f;
+    size_t numel = loss_node->size;
+
+    for (size_t i = 0; i < numel; i++){
+        m_loss += loss_node->act[i];
+    }
+
+    m_loss /= numel;
+
+    return m_loss;
+}

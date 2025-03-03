@@ -25,6 +25,23 @@ class GPT2Test : public ::testing::Test {
         void TearDown() override {}
 };
 
+TEST_F(GPT2Test, ZeroGrad2) {
+    // Test case 1: Default constructor
+    GPT2 model;
+    model.zero_grad();
+    for (size_t i = 0; i < model.num_params; ++i) {
+        EXPECT_FLOAT_EQ(model.grad[i], 0.0f);
+    }
+
+    // Test case 2: Parameterized constructor
+    GPT2 model2(512, 8, 30522, 512, 8);
+    model2.zero_grad();
+    for (size_t i = 0; i < model2.num_params; ++i) {
+        EXPECT_FLOAT_EQ(model2.grad[i], 0.0f);
+    }
+
+}
+
 TEST_F(GPT2Test, Constructor) {
     C = 768; // embedding dimension
     L = 12; // number of transformer blocks
@@ -39,8 +56,6 @@ TEST_F(GPT2Test, Constructor) {
 
     EXPECT_NO_THROW(model = new GPT2(C, L, V, maxT, NH));
     EXPECT_EQ(model->tblocks.size(), L); // expect L transformer blocks
-
-    
 
 }
 
@@ -206,7 +221,6 @@ TEST_F(GPT2Test, Backward) {
     std::chrono::duration<double, std::milli> duration = end - start;
     // Output the duration in milliseconds
     std::cout << "Time taken by backward(): " << duration.count() << " ms" << std::endl;
-
 
 }
 

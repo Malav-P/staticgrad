@@ -235,6 +235,30 @@ void tear_down(GPT2*& model,
                Node*& out,
                Node*& in)
 {
+    teardown_activations(activations, out, in);
+    teardown_tokenizer(tk);
+    teardown_datastream(ds);
+    teardown_model(model);
+}
+
+void teardown_model(GPT2*& model){
+    delete model;
+    model = nullptr;
+}
+
+void teardown_datastream(DataStream*& ds){
+    delete ds;
+    ds = nullptr;
+}
+
+void teardown_tokenizer(Tokenizer*& tk){
+    delete tk;
+    tk = nullptr;
+}
+
+void teardown_activations(Activation*& activations,
+                          Node*& out,
+                          Node*& in){
     delete out;
     out = nullptr;
 
@@ -243,30 +267,6 @@ void tear_down(GPT2*& model,
 
     delete activations;
     activations = nullptr;
-
-    delete tk;
-    tk = nullptr;
-
-    delete ds;
-    ds = nullptr;
-
-    delete model;
-    model = nullptr;
-
-    // std::cout << "\nteardown complete, memory deallocated" << std::endl;
-}
-
-float mean_loss(Node* loss_node){
-    float m_loss = 0.0f;
-    size_t numel = loss_node->size;
-
-    for (size_t i = 0; i < numel; i++){
-        m_loss += loss_node->act[i];
-    }
-
-    m_loss /= numel;
-
-    return m_loss;
 }
 
 /**

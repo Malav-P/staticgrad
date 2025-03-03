@@ -15,7 +15,6 @@ class Node {
 
         size_t current_T;
 
-
         Node();
         ~Node(){}
 
@@ -38,7 +37,6 @@ class Activation {
         void zero_grad();
         void point_nodes(Node* in, Node* out);
 
-        
 };
 
 #endif // NODE_HPP

@@ -37,6 +37,11 @@ void setup(GPT2*& model,
            const size_t T,
            const bool pretrained = false);
 
+void teardown_model(GPT2*& model);
+void teardown_tokenizer(Tokenizer*& tk);
+void teardown_datastream(DataStream*& ds);
+void teardown_activations(Activation*& activations, Node*& out, Node*& in);
+
 void tear_down(GPT2*& model,
                DataStream*& ds,
                Tokenizer*& tk,
