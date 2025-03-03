@@ -1,6 +1,12 @@
 #include "node.hpp"
 #include <cstring>
 
+/**
+ * @brief Constructs a Node with default-initialized attributes.
+ * 
+ * Initializes activation pointers to `nullptr`, shape to `{0}`, and size-related 
+ * attributes to zero.
+ */
 Node::Node():
 act(nullptr),
 act_grads(nullptr),
@@ -8,6 +14,22 @@ shape({0}),
 size(0),
 current_T(0){}
 
+/**
+ * @brief Allocates memory for activations and gradients in a transformer model.
+ * 
+ * This constructor calculates the total required buffer size for activations 
+ * (`act`) and gradients (`act_grads`) based on the model's batch size, sequence 
+ * length, hidden dimension, number of transformer layers, and vocabulary size. 
+ * 
+ * @param[in] B_ Batch size.
+ * @param[in] T_ Sequence length.
+ * @param[in] C_ Hidden dimension (embedding size).
+ * @param[in] L_ Number of transformer blocks.
+ * @param[in] V_ Vocabulary size.
+ * 
+ * @note The allocated memory is used for embedding, transformer blocks, layer 
+ *       normalization, and unembedding.
+ */
 Activation::Activation(const size_t B_,
                        const size_t T_,
                        const size_t C_,
@@ -34,13 +56,16 @@ V(V_)
     // unembedding (B, T, C) -> (B, T, V)
     size += B*T*V;
 
-    // softmax (B, T, V) -> (B, T, V)
-    size += B*T*V;
-
     act = new float[size];
     act_grads = new float[size];     
 }
 
+/**
+ * @brief Frees allocated memory for activations and gradients.
+ * 
+ * This destructor releases memory associated with `act` and `act_grads`, ensuring 
+ * proper cleanup to prevent memory leaks.
+ */
 Activation::~Activation()
 {
     delete[] act;
@@ -50,6 +75,12 @@ Activation::~Activation()
     act_grads = nullptr;
 }
 
+/**
+ * @brief Resets the gradient buffer to zero.
+ * 
+ * If the activation gradient buffer (`act_grads`) is allocated, this function 
+ * sets all gradient values to zero using `std::memset`.
+ */
 void Activation::zero_grad()
 {
     if (act_grads != nullptr){
@@ -57,6 +88,21 @@ void Activation::zero_grad()
     }
 }
 
+/**
+ * @brief Assigns activation buffers to input and output nodes.
+ * 
+ * This function sets activation and gradient buffers for the input (`in`) and 
+ * output (`out`) nodes, adjusting their shapes and sizes accordingly.
+ * 
+ * @param[out] out Pointer to the output node, which receives the final activations.
+ * @param[out] in Pointer to the input node, which holds intermediate activations.
+ * 
+ * @note 
+ * - The input node (`in`) is assigned the initial activation buffer.
+ * - The output node (`out`) is assigned the final layer's activation buffer.
+ * - Shape and size attributes are adjusted based on batch size (`B`), sequence 
+ *   length (`T`), and vocabulary size (`V`).
+ */
 void Activation::point_nodes(Node* out, Node* in)
 {
     in->act = act;

@@ -87,7 +87,7 @@ set_target_properties(test_common PROPERTIES OBJECT_OUTPUT_DIRECTORY ${TEST_BUIL
 
 # Define and add test executables
 set(TESTS
-    att add layernorm matmul softmax encoder transformerblock gpt2 utils datastream tokenizer interface inference train
+    att add layernorm matmul encoder transformerblock gpt2 utils datastream tokenizer interface inference train
 )
 
 # Add your test executables
@@ -110,10 +110,16 @@ add_custom_target(tests
     DEPENDS ${TESTS}
 )
 
+add_custom_target(run
+    DEPENDS ${TESTS}  # List all the executables that need to be built
+    COMMENT "Building and running all executables"
+)
 
-# # Add custom target for running tests TODO
-# add_custom_target(run
-#     COMMAND ${CMAKE_COMMAND} -E echo "Running tests..."
-#     COMMAND ${CMAKE_COMMAND} -E env zsh -c 'for test in ${BIN_DIR}/*; do ./$test; done'
-#     DEPENDS tests
-# )
+# Add commands to run the tests
+foreach(test_exec ${TESTS})
+    add_custom_command(TARGET run
+        POST_BUILD
+        COMMAND ${BIN_DIR}/${test_exec}  # Run the executable
+        COMMENT "Running ${test_exec}"
+    )
+endforeach()

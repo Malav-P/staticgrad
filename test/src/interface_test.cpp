@@ -38,7 +38,11 @@ TEST_F(SetupTeardownTest, NoMemoryLeaks) {
 }
 
 TEST_F(SetupTeardownTest, helloworld) {
-
+    std::ifstream file(PREFIX + "bin/hello_world_logits.bin", std::ios::binary);
+    if (!file.good()) {
+        std::cerr << "\033[1;33mWARN\033[0m: File "<< PREFIX + "bin/hello_world_logits.bin"<< " not found." << std::endl;
+        GTEST_SKIP();
+    }
     // setup model pointers and data structures
     GPT2* model = nullptr;
     Tokenizer* tk = nullptr;
@@ -58,12 +62,8 @@ TEST_F(SetupTeardownTest, helloworld) {
     in->current_T = 2;
 
     model->forward(out, in);
-    float* logits = out->act - 2*(model->V);
+    float* logits = out->act + (model->V);
 
-    std::ifstream file(PREFIX + "bin/hello_world_logits.bin", std::ios::binary);
-    if (!file) {
-        std::cerr << "Error opening file!\n";
-    }
     // Determine file size
     file.seekg(0, std::ios::end);
     std::streamsize size = file.tellg();
@@ -78,13 +78,12 @@ TEST_F(SetupTeardownTest, helloworld) {
         }
         
     } else {
-        std::cerr << "Error reading file!\n";
+        std::cerr << "Error reading file!" << std::endl;
     }
 
     // Cleanup
     delete[] data;
     file.close();
-
 
     // deallocate memory
     teardown_activations(activations, out, in);

@@ -12,11 +12,10 @@ const std::string PREFIX = REPO_PREFIX;
  * Args:
  *   @param model: Pointer to instance of GPT2
  *   @param out: The output node where the computed loss will be stored, a 2D tensor of shape (B, T).
- *   @param in: The input node containing the probabilities, a 3D tensor of shape (B, T, V).
+ *   @param in: The input node containing the logits, a 3D tensor of shape (B, T, V).
  *   @param t: Desired position of next token in sequence
  *
- * Returns:
- *   uint16_t. The most probable token for that position
+ *   @return The most probable token for that position
  */
 uint16_t next_token(GPT2*& model,
                      Node*& out,
@@ -38,13 +37,23 @@ uint16_t next_token(GPT2*& model,
     
     model->forward(out, in);
 
-    float* probabilities = out->act + (t-1)*V;
-    uint16_t next_tok = sample_token(probabilities, V, true);
+    float* logits = out->act + (t-1)*V;
+    uint16_t next_tok = sample_token(logits, V, true);
 
     return next_tok;
 }
 
-
+/**
+ * @brief Autoregressive generation of tokens
+ *
+ * 
+ *   @param model: Pointer to instance of GPT2
+ *   @param tk   : Pointer to instance of Tokenizer
+ *   @param out: The output node where the computed logits are stored, a tensor of shape (B, T, V).
+ *   @param in: The input node containing the input tokens, a 2D tensor of shape (B, T).
+ *   @param start: Starting sentence given to model
+ *
+ */
 void yap(GPT2*& model,
          Tokenizer*& tk,
          Node*& out,
@@ -53,9 +62,6 @@ void yap(GPT2*& model,
 
     // clear kv cache
     model->clear_kv_cache();
-
-    // maybe check / assert B = 1
-
 
     size_t T = in->shape[1];
     uint16_t eot = 50256;
@@ -105,7 +111,19 @@ void yap(GPT2*& model,
     model->clear_kv_cache();
 }
 
-
+/**
+ * @brief Initializes a GPT-2 model with predefined architecture.
+ * 
+ * This function allocates and initializes a new GPT-2 model instance with fixed 
+ * hyperparameters such as embedding dimension, transformer blocks, vocabulary size, 
+ * maximum sequence length, and attention heads. If `pretrained` is set to `true`, 
+ * it loads pretrained weights from a binary file.
+ * 
+ * @param[out] model Pointer to the model instance. Must be `nullptr` before calling.
+ * @param[in] pretrained If `true`, loads pretrained weights; otherwise, initializes randomly.
+ * 
+ * @throws std::runtime_error If `model` is not `nullptr` when passed.
+ */
 void setup_model(GPT2*& model, const bool pretrained){
     if (model != nullptr){
         throw std::runtime_error("passed model pointer must be null");
@@ -125,6 +143,15 @@ void setup_model(GPT2*& model, const bool pretrained){
     }
 }
 
+/**
+ * @brief Initializes the GPT-2 tokenizer.
+ * 
+ * This function creates a new tokenizer instance using a pre-specified vocabulary file.
+ * 
+ * @param tk Pointer to the tokenizer instance. Must be `nullptr` before calling.
+ * 
+ * @throws std::runtime_error If `tk` is not `nullptr` when passed.
+ */
 void setup_tokenizer(Tokenizer*& tk){
     if (tk != nullptr){
         throw std::runtime_error("passed tokenizer pointer must be null");
@@ -134,6 +161,19 @@ void setup_tokenizer(Tokenizer*& tk){
     tk = new Tokenizer(fp_tk);
 }
 
+/**
+ * @brief Initializes a data stream for tokenized text input.
+ * 
+ * This function creates a new `DataStream` instance from a predefined binary file and 
+ * initializes a buffer for token storage.
+ * 
+ * @param ds Pointer to the data stream instance. Must be `nullptr` before calling.
+ * @param numtokens The number of tokens to load into the buffer.
+ * 
+ * @throws std::runtime_error If `ds` is not `nullptr` when passed.
+ * 
+ * @note The buffer is initialized with `numtokens + 1` to ensure proper target token availability.
+ */
 void setup_datastream(DataStream*& ds, const size_t numtokens){
     if (ds != nullptr){
         throw std::runtime_error("passed datastream pointer must be null");
@@ -143,6 +183,23 @@ void setup_datastream(DataStream*& ds, const size_t numtokens){
     ds->init_buffer(numtokens + 1); // +1 to include necessary target tokens for training
 }
 
+/**
+ * @brief Initializes activation buffers and associated nodes.
+ * 
+ * This function allocates memory for activation buffers and initializes input and output nodes
+ * for model computations. The activation structure is configured based on the batch size, 
+ * sequence length, and model parameters.
+ * 
+ * @param activations Pointer to the `Activation` instance.
+ * @param out Pointer to the output node.
+ * @param in Pointer to the input node.
+ * @param B Batch size.
+ * @param T Sequence length.
+ * @param model Pointer to the GPT-2 model instance, which provides channel (`C`), 
+ *                  transformer block count (`L`), and vocabulary size (`V`).
+ * 
+ * @note The `activations` instance internally manages `out` and `in` nodes.
+ */
 void setup_activations(Activation*& activations,
                        Node*& out,
                        Node*& in, 
@@ -177,7 +234,6 @@ void setup_activations(Activation*& activations,
 *  @note - The model is loaded with pre-trained weights if pretrained is true.
 *  @note - The tokenizer is initialized with the vocabulary from GPT-2.
 */
-
 void setup(GPT2*& model,
            DataStream*& ds,
            Tokenizer*& tk,
@@ -211,9 +267,6 @@ void setup(GPT2*& model,
 
 }
 
-
-
-
 /**
 * Deallocates the memory allocated by the setup function.
 *
@@ -241,21 +294,57 @@ void tear_down(GPT2*& model,
     teardown_model(model);
 }
 
+/**
+ * @brief Deallocates and resets the GPT-2 model instance.
+ * 
+ * This function safely deletes the allocated `GPT2` model and sets the pointer to `nullptr`
+ * to prevent dangling references.
+ * 
+ * @param model Pointer to the model instance. Must be a valid pointer or `nullptr`.
+ */
 void teardown_model(GPT2*& model){
     delete model;
     model = nullptr;
 }
 
+/**
+ * @brief Deallocates and resets the data stream instance.
+ * 
+ * This function safely deletes the allocated `DataStream` instance and sets the pointer 
+ * to `nullptr` to avoid memory leaks.
+ * 
+ * @param ds Pointer to the data stream instance. Must be a valid pointer or `nullptr`.
+ */
 void teardown_datastream(DataStream*& ds){
     delete ds;
     ds = nullptr;
 }
 
+/**
+ * @brief Deallocates and resets the tokenizer instance.
+ * 
+ * This function safely deletes the allocated `Tokenizer` instance and sets the pointer to `nullptr`
+ * to prevent unintended access.
+ * 
+ * @param tk Pointer to the tokenizer instance. Must be a valid pointer or `nullptr`.
+ */
 void teardown_tokenizer(Tokenizer*& tk){
     delete tk;
     tk = nullptr;
 }
 
+/**
+ * @brief Deallocates and resets activation buffers and associated nodes.
+ * 
+ * This function safely deletes the activation buffers along with input and output nodes,
+ * setting their pointers to `nullptr` to prevent dangling references.
+ * 
+ * @param activations Pointer to the `Activation` instance.
+ * @param out Pointer to the output node.
+ * @param in Pointer to the input node.
+ * 
+ * @note Ensures all allocated memory for activations and nodes is properly released.
+ */
 void teardown_activations(Activation*& activations,
                           Node*& out,
                           Node*& in){
@@ -301,12 +390,8 @@ void train(const int max_batches){
     loss->act = new float[B*T];
     loss->act_grads = new float[B*T];
 
-    // create a node for softmax in
-    Node* softmax_in = new Node();
-    softmax_in->shape = {B, T, model->V};
-    softmax_in->size = B*T*(model->V);
-    softmax_in->act = out->act - B*T*(model->V);
-    softmax_in->act_grads = out->act_grads - B*T*(model->V);
+    SoftmaxCrossEntropy* sftmax_ce = new SoftmaxCrossEntropy();
+
 
 
     // begin training
@@ -316,7 +401,7 @@ void train(const int max_batches){
         
         model->clear_kv_cache(); // clear kv cache
         model->forward(out, in); // do forward pass
-        crossentropy_forward(loss, out, (ds->buffer) + 1); // compute loss
+        sftmax_ce->forward(loss, out, (ds->buffer) + 1); // compute loss
 
         float m_loss = mean_loss(loss);
         std::cout << "iteration " << t << ": loss = " << m_loss << std::endl;
@@ -324,17 +409,16 @@ void train(const int max_batches){
         model->zero_grad(); // zero gradients of parameters
         activations->zero_grad(); // zero gradients of activations
 
-        crossentropy_softmax_backward(out, softmax_in, (ds->buffer) + 1, model->softmax->temperature); // do backward through crossentropy loss and softmax
+        sftmax_ce->backward(loss, out, (ds->buffer) + 1); // do backward through crossentropy loss and softmax
         model->backward(out, in);
         model->update(t+1);
     }
 
+    delete sftmax_ce;
 
     delete[] loss->act;
     delete[] loss->act_grads;
     delete loss;
-
-    delete softmax_in;
 
     tear_down(model, ds, tk, activations, out, in);
 }

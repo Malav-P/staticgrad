@@ -21,7 +21,6 @@ class GPT2 {
         ~GPT2();
 
         void zero_grad();
-        void set_temperature(const float temp);
         void load_weights(const std::string& fname);
         void update(const int t); 
 
@@ -42,7 +41,6 @@ class GPT2 {
         std::vector<TransformerBlock*> tblocks; // vector of TransformerBlocks
         LayerNorm* final_layernorm; // final layer norm
         Matmul* unembedding; // unembedding 
-        Softmax* softmax; // softmax
 
         float* params;
         float* grad;

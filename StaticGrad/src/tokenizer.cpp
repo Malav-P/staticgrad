@@ -1,7 +1,7 @@
 #include "tokenizer.hpp"
 
  /**
-  * Constructs a `Tokenizer` object from a binary file.
+  * @brief Constructs a `Tokenizer` object from a binary file.
   *
   * @param filename Path to the binary file containing token data.
   * 

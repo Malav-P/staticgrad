@@ -121,22 +121,6 @@ class Add : public Operation {
 
 };
 
-class Softmax : public Operation {
-    public:
-
-        float temperature;
-
-        Softmax(float temp):
-            Operation(nullptr, nullptr),
-            temperature(temp){}
-
-        void forward(Node* out, Node* in) override;
-        void backward(Node* out, Node* in) override;
-
-        void set_temperature(float temp);
-
-};
-
 class RowAdd : public Operation {
     public :
 

@@ -13,15 +13,12 @@
 
 
 /**
- * Shifts the pointer location for in and out activations/grad in order to process the next layer in gpt. Used for the forward pass
+ * @brief Shifts the pointer location for in and out activations/grad in order to process the next layer in gpt. Used for the forward pass
  *
- * Args:
  *   @param out: The output node where the next layer's output will be written to
  *   @param in: The input node containing the input activations for the next layer
  *   @param shape_: The shape of the next layer's output
  *
- * @note
- *   - Returns nothing. The pointers are shifted accordingly.
  */
 void shift(Node* out, Node* in, const std::vector<size_t> shape_){
 
@@ -45,15 +42,12 @@ void shift(Node* out, Node* in, const std::vector<size_t> shape_){
 }
 
 /**
- * Shifts the pointer location for in and out activations/grad in order to process the previous layer in gpt (used for the backward pass)
+ * @brief Shifts the pointer location for in and out activations/grad in order to process the previous layer in gpt (used for the backward pass)
  *
- * Args:
- *   @param out: The output node where the next layer's output will be written to
- *   @param in: The input node containing the input activations for the next layer
- *   @param shape_: The shape of the previous layer's input
+ * @param out: The output node where the next layer's output will be written to
+ * @param in: The input node containing the input activations for the next layer
+ * @param shape_: The shape of the previous layer's input
  *
- * @note
- *   - Returns nothing. The pointers are shifted accordingly.
  */
 void shift_back(Node* out, Node* in, const std::vector<size_t> shape_){
 
@@ -77,10 +71,10 @@ void shift_back(Node* out, Node* in, const std::vector<size_t> shape_){
 }
 
 /**
- * @brief Encodes the input sequence and outputs the encoded representation.
+ * @brief Embeds the input sequence into latent space using token embedding and position embedding weight matrices.
  *
- * @param[out] out The output node containing the encoded representation.
- * @param[in] in The input node containing the sequence to be encoded.
+ * @param out The output node containing the encoded representation.
+ * @param in The input node containing the sequence to be encoded.
  *
  * @note The input node's shape should be [B, T], where B is the batch size and T is the sequence length.
  * The output node's shape will be [B, T, C], where C is the embedding size.
@@ -89,7 +83,7 @@ void shift_back(Node* out, Node* in, const std::vector<size_t> shape_){
  * This function applies the embedding lookup for both tokens and positions and then sums them up to get the final encoded representation.
  * The token embeddings are stored in the 'params' array, with the first C * vocab_size elements representing the token embeddings.
  * The position embeddings are stored in the rest of the 'params' array, with the next C * maxT elements representing the position embeddings.
- * The encoded representation is stored in the 'act' array of the output node.
+ * The embedded representation is stored in the 'act' member of the out node.
  */
 void Encoder::forward(Node* out, Node* in){
 
@@ -124,9 +118,9 @@ void Encoder::forward(Node* out, Node* in){
 }
 
 /**
- * @brief Performs the backward pass through the encoder layer.
+ * @brief Performs the backward pass through the embedding layer.
  *
- * This function updates the gradient of token embeddings (wte) and positional embeddings (wpe) based on the gradients of the output (@p out).
+ * This function updates the gradient of token embeddings (wte) and positional embeddings (wpe) based on the gradients of the output.
  *
  * @param out The output tensor of shape (B, T, C). B is the batch size, T is the sequence length, and C is the hidden channel size.
  * @param in The input tensor of shape (B, T). Each element in the input tensor corresponds to an integer representing the token ID.
@@ -187,7 +181,7 @@ void Encoder::backward(Node* out, Node* in){
  * @param NH      The number of heads for the multi-head self-attention. This parameter determines the parallelism of the self-attention mechanism.
  * @param maxT    The maximum sequence length. This is important for allocating sufficient memory and handling variable-length sequences.
  *
- * @throw std::invalid_argument If @p C is not divisible by @p NH. This is a fundamental requirement of the Transformer architecture.
+ * @throw `std::invalid_argument` If @p C is not divisible by @p NH. This is a fundamental requirement of the Transformer architecture.
  * 
  * @note 
  * - The constructor dynamically allocates memory for various internal nodes and layers. Hence, it is crucial to handle exceptions during construction.
@@ -463,8 +457,8 @@ TransformerBlock::~TransformerBlock(){
 /**
  * @brief Performs a forward pass through the attention block.
  *
- * @param[out] out  The output node.
- * @param[in]  in   The input node with shape `(B, T, C)`.
+ * @param out  The output node.
+ * @param  in   The input node with shape `(B, T, C)`.
  *
  * @note 
  * - memory for an internal buffer is allocated to cache the values of the query-key dot products and the softmax operation on that cache.
@@ -493,9 +487,7 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
     else { // kv cache does not exist (this should always be the case during training)
         start = 0;
         buffer = new float[2*half_buffer_size];
-    }
-    // delete[] buffer should be called after yapping is done or after one training iteration is done
-    
+    }    
     
     for (size_t b = 0 ; b < B; b++){
 
@@ -665,7 +657,7 @@ void Attention::backward(Node* out, Node* in) {
 }
 
 /**
- * Forward pass of the GELU (Gaussian Error Linear Unit) activation function.
+ * @brief Forward pass of the GELU (Gaussian Error Linear Unit) activation function.
  *
  * This function applies the GELU activation function to each element in the input node and stores the result in the output node.
  *
@@ -691,7 +683,7 @@ void GELU::forward(Node* out, Node* in) {
 }
 
 /**
- * Backward pass of the GELU (Gaussian Error Linear Unit) activation function.
+ * @brief Backward pass of the GELU (Gaussian Error Linear Unit) activation function.
  *
  * This function applies the gradient of GELU activation function to each element.
  *
@@ -722,7 +714,7 @@ void GELU::backward(Node* out, Node* in) {
 
 
 /**
- * Forward pass of the Layernorm operation
+ * @brief Forward pass of the Layernorm operation
  *
  * This function normalizes each row of the input (along axis = 2) to have zero mean and unit variance. Then 
  * it applies a scale and shift to each element. There are a total of 2 * C learnable parameters in the layernorm.
@@ -792,7 +784,7 @@ void LayerNorm::forward(Node* out, Node* in) { // (B, T, C) -> (B, T, C)
 }
 
 /**
- * Backward pass of the Layernorm operation
+ * @brief Backward pass of the Layernorm operation
  * 
  * This function applies the backward pass of thel layernorm operation.
  *
@@ -857,7 +849,7 @@ void LayerNorm::backward(Node* out, Node* in){
 }
 
 /**
- * Computes the forward pass of matrix multiplication.
+ * @brief Computes the forward pass of matrix multiplication.
  *
  * This method performs a matrix multiplication operation on the input node's
  * activation values and the layer's parameters, storing the result in the output
@@ -866,9 +858,8 @@ void LayerNorm::backward(Node* out, Node* in){
  * @param out The output node where the result of the matrix multiplication will be stored.
  * @param in The input node containing the activation values to be multiplied.
  *
- * @throws std::invalid_argument If either the input or output node's activation values are nullptr.
- */
-        
+ * @throws `std::invalid_argument` If either the input or output node's activation values are nullptr.
+ */    
 void Matmul::forward(Node* out, Node* in) {
 
     if ((in->act == nullptr) || (out->act == nullptr)){
@@ -909,7 +900,7 @@ void Matmul::forward(Node* out, Node* in) {
 
 
 /**
- * Computes the forward pass of matrix multiplication assuming the weights are given tranposed.
+ * @brief Computes the forward pass of matrix multiplication assuming the weights are given tranposed.
  *
  * This method performs a matrix multiplication operation on the input node's
  * activation values and the layer's parameters, storing the result in the output
@@ -919,8 +910,7 @@ void Matmul::forward(Node* out, Node* in) {
  * @param in The input node containing the activation values to be multiplied.
  *
  * @throws std::invalid_argument If either the input or output node's activation values are nullptr.
- */
-        
+ */    
 void Matmul::forward2(Node* out, Node* in) {
 
     if ((in->act == nullptr) || (out->act == nullptr)){
@@ -958,6 +948,17 @@ void Matmul::forward2(Node* out, Node* in) {
     }
 }
 
+/**
+ * @brief Computes the backward pass of matrix multiplication.
+ *
+ * This method performs a matrix multiplication operation to compute gradients of with respect to
+ * the input and parameters
+ *
+ * @param out The output node where the result of the matrix multiplication will be stored.
+ * @param in The input node containing the activation values to be multiplied.
+ *
+ * @throws `std::invalid_argument` If either the input or output node's activation values are nullptr.
+ */  
 void Matmul::backward(Node* out, Node* in) {
     // Compute C <- alpha * op(A) * op(B) + beta*C
     // where op() can be the identity operation or the transpose operation.
@@ -985,6 +986,17 @@ void Matmul::backward(Node* out, Node* in) {
     }
 }
 
+/**
+ * @brief Computes the backward pass of matrix multiplication assuming the weights are given tranposed.
+ *
+ * This method performs a matrix multiplication operation to compute gradients of with respect to
+ * the input and parameters
+ * 
+ * @param out The output node where the result of the matrix multiplication will be stored.
+ * @param in The input node containing the activation values to be multiplied.
+ *
+ * @throws std::invalid_argument If either the input or output node's activation values are nullptr.
+ */  
 void Matmul::backward2(Node* out, Node* in) {
     // Compute C <- alpha * op(A) * op(B) + beta*C
     // where op() can be the identity operation or the transpose operation.
@@ -1031,6 +1043,20 @@ void Matmul::backward2(Node* out, Node* in) {
     }
 }
 
+/**
+ * @brief Performs element-wise addition of two nodes.
+ * 
+ * This function adds the activation values (`act`) of the input node (`in`)
+ * to the output node (`out`). The sizes of the input and output arrays must be equal.
+ * 
+ * @param[out] out The output node where the result is stored. Must have a valid `act` pointer.
+ * @param[in] in The input node whose activation values will be added. Must have a valid `act` pointer.
+ * 
+ * @throws `std::invalid_argument` If either `out->act` or `in->act` is null.
+ * @throws `std::invalid_argument` If `out->size` is not equal to `in->size`.
+ * 
+ * @note This function modifies `out->act` in place.
+ */
 void Add::forward(Node* out, Node* in){
 
     if (out->act == nullptr || in->act == nullptr){
@@ -1049,6 +1075,18 @@ void Add::forward(Node* out, Node* in){
 
 }
 
+/**
+ * @brief Performs backwards pass of `Add` operation.
+ * 
+ * 
+ * @param[out] out The output node where the result is stored. Must have a valid `act` pointer.
+ * @param[in] in The input node whose activation values will be added. Must have a valid `act` pointer.
+ * 
+ * @throws `std::invalid_argument` If either `out->act` or `in->act` is null.
+ * @throws `std::invalid_argument` If `out->size` is not equal to `in->size`.
+ * 
+ * @note This function modifies `in->act` in place.
+ */
 void Add::backward(Node* out, Node* in){
 
     if (out->act == nullptr || in->act == nullptr){
@@ -1066,8 +1104,27 @@ void Add::backward(Node* out, Node* in){
     }
 }
 
-
-
+/**
+ * @brief Performs row-wise addition on the input tensor.
+ * 
+ * This function adds the parameter vector (`params`) to each row of the input tensor (`in`),
+ * storing the result in the output tensor (`out`). The addition is performed along the 
+ * last dimension (channel dimension).
+ * 
+ * @param[out] out The output node storing the modified activations. 
+ *                 Must have a valid `act` pointer and match `in` in shape.
+ * @param[in] in The input node whose activations are modified. 
+ *               Must have a valid `act` pointer.
+ * 
+ * @note The input tensor has a shape of `[B, T, C]`, where:
+ *       - `B` = batch size
+ *       - `T` = sequence length (time steps)
+ *       - `C` = number of channels (features per timestep)
+ * 
+ * @details The operation is performed as:
+ *          \f$ out[b, t, c] = in[b, t, c] + params[c] \f$
+ *          for all `b` in `B`, `t` in `current_T`, and `c` in `C`.
+ */
 void RowAdd::forward(Node* out, Node* in){
 
     size_t B = in->shape[0];
@@ -1090,6 +1147,23 @@ void RowAdd::forward(Node* out, Node* in){
     }
 }
 
+/**
+ * @brief Computes the gradients for the row-wise addition operation.
+ * 
+ * This function propagates gradients back through the computation graph. It 
+ * computes the gradients for both the input tensor (`in`) and the parameter vector (`params`).
+ * 
+ * @param[out] out The output node containing gradient values (`act_grads`). 
+ * @param[in] in The input node whose gradient will be updated (`act_grads`). 
+ * 
+ * @note This function updates:
+ *       - `in->act_grads` (gradients for the input tensor).
+ *       - `grad` (gradients for the parameter vector).
+ * 
+ * @details The gradients are computed as:
+ *          \f$ \text{inp1_g}[c] += \sum_{b=0}^{B} \sum_{t=0}^{T} \text{out_g}[b, t, c] \f$
+ *          ensuring correct gradient accumulation for the parameter vector.
+ */
 void RowAdd::backward(Node* out, Node* in){
 
     float* inp0_g = in->act_grads;
@@ -1113,75 +1187,4 @@ void RowAdd::backward(Node* out, Node* in){
             }
         }
     }
-}
-
-void Softmax::forward(Node* out, Node* in){
-    size_t B = in->shape[0];
-    size_t T = in->shape[1];
-    size_t V = in->shape[2];
-
-    size_t current_T = in->current_T;
-
-    for (size_t b = 0; b < B; b++){
-        for (size_t t = 0; t < current_T; t++){
-            float* bt_arr = in->act + b * T * V + t * V;
-            float* out_bt_arr = out->act + b * T * V + t * V;
-
-            // first pass to get maxval for numerical stability
-            float maxval = -FLT_MAX;
-            float val = 0.0f;
-            for (size_t v = 0; v < V; v++){
-                val = bt_arr[v];
-                if (val > maxval){
-                    maxval = val;
-                }
-            }
-            // std::cout << maxval << std::endl;
-
-            // second pass to compute exponentials
-            float exp_sum = 0.0f;
-            float exp_val = 0.0f;
-            for (size_t v = 0; v < V; v++){
-                exp_val = expf((bt_arr[v] - maxval)/temperature);
-                out_bt_arr[v] = exp_val;
-                exp_sum += exp_val;
-            }
-
-            float exp_sum_inv = exp_sum == 0.0f ? 0.0f : 1.0f / exp_sum;
-
-            // third pass to normalize by sum
-            for (size_t v = 0; v < V; v++){
-                out_bt_arr[v] *= exp_sum_inv;
-            }
-        }
-    }
-}
-
-void Softmax::backward(Node* out, Node* in){
-    size_t B = in->shape[0];
-    size_t T = in->shape[1];
-    size_t V = in->shape[2];
-
-    float local_deriv;
-
-    for (size_t b = 0; b < B; b++){
-        for (size_t t = 0; t < T; t++){
-            // seek to bt position 
-            float* bt_out = out->act + b * T * V + t * V;
-            float* bt_in_grad = in->act_grads + b * T * V + t * V;
-            float* bt_out_grad = out->act_grads + b * T * V + t * V;
-
-            for (size_t v = 0; v < V; v++){
-                
-                for (size_t i = 0; i < V ; i++){
-                    local_deriv = bt_out[i] * ((i == v ? 1.0f : 0.0f) - bt_out[v]);
-                    bt_in_grad[v] += bt_out_grad[i] * local_deriv / temperature;
-                }
-            }
-        }
-    }
-}
-
-void Softmax::set_temperature(float temp){
-    temperature = temp;
 }

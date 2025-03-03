@@ -13,6 +13,7 @@ cmake ..
 
 ## Get Weights and Vocab
 ```bash 
+cd ../
 conda env create -f gpt2_python/environment.yml
 conda activate staticgrad_python
 
@@ -25,6 +26,7 @@ conda deactivate
 ```
 ## To Run Inference
 ```bash
+cd build
 make inference
 ./bin/inference <your starting text> <seq len> # keep at ~100 tokens for reasonable inference speed
 ```

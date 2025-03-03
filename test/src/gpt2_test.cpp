@@ -138,21 +138,6 @@ TEST_F(GPT2Test, Forward) {
     // Output the duration in milliseconds
     std::cout << "Time taken by forward(): " << duration.count() << " ms" << std::endl;
 
-    // each array at (b, t) position should sum to one
-    for (size_t b = 0; b < B; b++){
-        for (size_t t = 0; t < T; t++){
-            float* probs = out->act + b * T*V + t * V;
-            float sum = 0.0f;
-            for (size_t v = 0; v < V; v++){
-                float p = probs[v];
-                EXPECT_LE(p, 1.0f);
-                EXPECT_GE(p, 0.0f);
-                sum += p;
-            }
-            EXPECT_NEAR(sum, 1.0f, 1e-5);
-        }
-    }
-
 }
 
 TEST_F(GPT2Test, Backward) {

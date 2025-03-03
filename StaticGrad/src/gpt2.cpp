@@ -36,9 +36,6 @@ size_t gpt2_num_acts(const size_t B,
     // unembedding (B, T, C) -> (B, T, V)
     num_acts += B*T*V;
 
-    // softmax (B, T, V) -> (B, T, V)
-    num_acts += B*T*V;
-
     return num_acts;
 };
 
@@ -150,9 +147,6 @@ GPT2::GPT2(const size_t C_,
 
         unembedding = new Matmul(params, grad);
 
-        float temperature = 1.0f;
-        softmax = new Softmax(temperature);
-
         if (p - params != static_cast<int>(num_params) || g - grad != static_cast<int>(num_params)){
             throw std::runtime_error("parameter allocation incorrect");
         }
@@ -163,7 +157,6 @@ GPT2::GPT2(const size_t C_,
  * @brief Destroy the GPT2 object. Deletes dynamically allocated memory for the model parameters, gradients, and submodules.
  */
 GPT2::~GPT2(){
-    delete softmax;
     delete unembedding;
     delete final_layernorm;
 
@@ -188,15 +181,6 @@ void GPT2::zero_grad(){
 }
 
 /**
- * @brief Set the temperature for the softmax layer.
- *
- * @param temp The temperature value to set.
- */
-void GPT2::set_temperature(const float temp){
-    softmax->set_temperature(temp);
-}
-
-/**
  * @brief Update the parameters of the model using Adam
  *
  * @param t timestep, a.k.a. the exponent for beta1 and beta2 in the adam update.
@@ -218,7 +202,11 @@ void GPT2::update(const int t){
     }
 }
 
-
+/**
+ * 
+ * @brief Clear the key-value caches of all transformer blocks
+ * 
+ */
 void GPT2::clear_kv_cache(){
     for (auto& tblock : tblocks){
         delete[] tblock->att->buffer;
@@ -233,17 +221,20 @@ void GPT2::clear_kv_cache(){
  * This function transforms the input sequence tensor of shape (B, T) to an output tensor 
  * of shape (B, T, V), where B is the batch size, T is the sequence length, and V is the 
  * vocabulary size. The forward pass involves the following major components:
- * 1. Encoder: A multi-layer perceptron that converts the input sequences to a dense representation.
- * 2. Transformer Blocks: A sequence of self-attention and feed-forward neural networks that process the encoded input.
- * 3. Layer Normalization: Applies layer normalization to the output of the last transformer block.
- * 4. Unembedding: Maps the transformed representation to vocabulary probabilities using a linear layer.
- * 5. Softmax: Computes the softmax probabilities over the vocabulary.
  * 
- * @param out   The output Node, containing the probabilities over vocabulary for each input sequence.
+ * - Encoder: Token and positional embedding of sequence into latent space.
+ * 
+ * - Transformer Blocks: A sequence of self-attention and feed-forward neural networks that process the encoded input.
+ * 
+ * - Layer Normalization: Applies layer normalization to the output of the last transformer block.
+ * 
+ * - Unembedding: Maps from latent space back to token space.
+ * 
+ * @param out   The output Node, containing the logits over vocabulary for each input sequence.
  *              Shape: (B, T, V), where B is the batch size, T is the sequence length, and V is the vocabulary size.
  * @param in    The input Node, containing the token indices of the input sequences. Shape: (B, T).
  *
- * @throws std::runtime_error if the memory allocation for activations is not managed properly.
+ * @throws `std::runtime_error` if the memory allocation for activations is not managed properly.
  */
 void GPT2::forward(Node* out, Node* in){
     // in is shape (B, T)
@@ -297,10 +288,6 @@ void GPT2::forward(Node* out, Node* in){
     shift(out_internal, in_internal, {B, T, V});
     unembedding->forward2(out_internal, in_internal); // (B, T, C) - > (B, T, V)
 
-    // forward through softmax
-    shift(out_internal, in_internal, {B, T, V});
-    softmax->forward(out_internal, in_internal); // (B, T, V) -> (B, T, V)
-
     // verify that results are in out Node
     if ((out_internal->act != out->act) || (out_internal->act_grads != out->act_grads) || (out_internal->size != out->size)){
         throw std::runtime_error("out node and out_internal node are not equal");
@@ -311,6 +298,17 @@ void GPT2::forward(Node* out, Node* in){
 
 }
 
+/**
+ * @brief Performs the backward pass of the GPT-2 model.
+ *
+ * This function backpropagates gradients from the loss through the layers of the model.
+ * 
+ * @param out   The output Node, containing the logits over vocabulary for each input sequence.
+ *              Shape: (B, T, V), where B is the batch size, T is the sequence length, and V is the vocabulary size.
+ * @param in    The input Node, containing the token indices of the input sequences. Shape: (B, T).
+ *
+ * @throws `std::runtime_error` if the memory allocation for activations is not managed properly.
+ */
 void GPT2::backward(Node* out, Node* in){
     // in is shape (B, T)
     // out is shape (B, T, V)
@@ -325,18 +323,11 @@ void GPT2::backward(Node* out, Node* in){
     out_internal->size = out->size;
 
     Node* in_internal = new Node();
-    in_internal->shape = {B, T, V};
-    in_internal->size = B*T*V;
+    in_internal->shape = {B, T, C};
+    in_internal->size = B*T*C;
     in_internal->act = out->act - in_internal->size;
     in_internal->act_grads = out->act_grads - in_internal->size;
 
-    // backward through softmax takes forever, need to couple with cross entropy loss.
-    // softmax->backward(out_internal, in_internal);
-    // std::cerr << "WARN: Backward through softmax is not done here...ensure that cross_entropy_backward is called prior to this method to fill the gradients for this part of the backward pass.\n";
-
-
-    // backward through unembedding
-    shift_back(out_internal, in_internal, {B, T, C});
     unembedding->backward2(out_internal, in_internal);
 
     // backward through layernorm
@@ -379,14 +370,10 @@ void GPT2::backward(Node* out, Node* in){
 /**
  * Loads weights from a file into the models parameters.
  *
- * Args:
- *   @param fname: The name of the file containing the weights.
+ * @param fname: The name of the file containing the weights.
  *
- * Returns:
- *   None.
- *
- * Throws:
- *   std::runtime_error if the file cannot be opened, the number of bytes in the file does not match the expected number, or an error occurs while reading the file.
+ * @throws `std::runtime_error` if the file cannot be opened, the number of bytes in the file does not match the expected number, or an error occurs while reading the file.
+ * 
  */
 void GPT2::load_weights(const std::string& fname)
 {

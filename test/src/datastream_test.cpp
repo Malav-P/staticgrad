@@ -40,10 +40,19 @@ TEST_F(DataStreamTest, createDataStream) {
 TEST_F(DataStreamTest, openfile) {
 
     std::string filepath = PREFIX + "bin/tinyshakespeare.bin";
+    std::ifstream file(filepath);
+  
 
-    EXPECT_NO_THROW(ds->open(filepath));
-    EXPECT_TRUE(ds->stream != nullptr);
-    EXPECT_TRUE(ds->stream->is_open() == true);
+    if (file.good()) {
+        EXPECT_NO_THROW(ds->open(filepath));
+        EXPECT_TRUE(ds->stream != nullptr);
+        EXPECT_TRUE(ds->stream->is_open() == true);
+    } else {
+        // If the file doesn't exist, you could still check the behavior
+        std::cerr << "\033[1;33mWARN\033[0m: File not found at " << filepath << std::endl;
+        GTEST_SKIP();
+    }
+
 
 }
 
@@ -71,32 +80,49 @@ TEST_F(DataStreamTest, openinvalidfile) {
 TEST_F(DataStreamTest, tinystories) {
 
     std::string filepath = PREFIX + "bin/tinystories.bin";
-    ds->open(filepath);
+    std::ifstream file(filepath);
+    if (file.good()){
+        ds->open(filepath);
 
-    ds->init_buffer(64);
+        ds->init_buffer(64);
+    
+        EXPECT_NO_THROW(ds->load_buffer());
+        EXPECT_EQ(ds->buffer[0], 50256); // first token is gpt2 eot token
+    
+        // load another batch
+        ds->load_buffer();
+        EXPECT_NE(ds->buffer[0], 50256); // first token will generally not be the eot token
+    }
+    else{
+        std::cerr << "\033[1;33mWARN\033[0m: File not found at " << filepath << std::endl;
+        GTEST_SKIP();
+    }
 
-    EXPECT_NO_THROW(ds->load_buffer());
-    EXPECT_EQ(ds->buffer[0], 50256); // first token is gpt2 eot token
-
-    // load another batch
-    ds->load_buffer();
-    EXPECT_NE(ds->buffer[0], 50256); // first token will generally not be the eot token
 
 }
 
 TEST_F(DataStreamTest, tinyshakespeare) {
 
     std::string filepath = PREFIX + "bin/tinyshakespeare.bin";
-    ds->open(filepath);
+    std::ifstream file(filepath);
 
-    ds->init_buffer(64);
+    if (file.good()){
 
-    EXPECT_NO_THROW(ds->load_buffer());
-    EXPECT_EQ(ds->buffer[0], 9203); // first token is gpt2 eot token
+        ds->open(filepath);
 
-    // load another batch
-    ds->load_buffer();
-    EXPECT_NE(ds->buffer[0], 50256); // first token will generally not be the eot token
+        ds->init_buffer(64);
+
+        EXPECT_NO_THROW(ds->load_buffer());
+        EXPECT_EQ(ds->buffer[0], 9203); // first token is gpt2 eot token
+
+        // load another batch
+        ds->load_buffer();
+        EXPECT_NE(ds->buffer[0], 50256); // first token will generally not be the eot token
+    }
+    else{
+        std::cerr << "\033[1;33mWARN\033[0m: File not found at " << filepath << std::endl;
+        GTEST_SKIP();
+    }
 
 }
 
