@@ -18,6 +18,7 @@ class SetupTeardownTest : public ::testing::Test {
 
 TEST_F(SetupTeardownTest, NoMemoryLeaks) {
     GPT2* model = nullptr;
+    Optimizer* opt = nullptr;
     DataStream* ds = nullptr;
     Tokenizer* tk = nullptr;
     Activation* activations = nullptr;
@@ -28,10 +29,10 @@ TEST_F(SetupTeardownTest, NoMemoryLeaks) {
     size_t B = 1; // batch size
     size_t T = 1; // sequence length
 
-    setup(model, ds, tk, activations, out, in, B, T, pretrained);
+    setup(model, opt, ds, tk, activations, out, in, B, T, pretrained);
     EXPECT_NE(model, nullptr);
 
-    tear_down(model, ds, tk, activations, out, in);
+    tear_down(model, opt, ds, tk, activations, out, in);
     
     EXPECT_EQ(model, nullptr);
 

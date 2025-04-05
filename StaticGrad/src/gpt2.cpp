@@ -115,17 +115,12 @@ GPT2::GPT2(const size_t C_,
     L(L_),
     V(V_),
     maxT(maxT_),
-    NH(NH_),
-    beta1(0.9),
-    beta2(0.999),
-    alpha(0.0001){
+    NH(NH_)
+    {
         num_params = gpt2_memrequirement(C, L, V, maxT);
 
         params = new float[num_params];
         grad = new float[num_params];
-
-        m = new float[num_params](); // parentheses here initialize array to zero
-        v = new float[num_params]();
 
         float* p = params;
         float* g = grad;
@@ -165,41 +160,9 @@ GPT2::~GPT2(){
     }
 
     delete encoder;
-
-    delete[] v;
-    delete[] m;
     
     delete[] grad;
     delete[] params;
-}
-
-/**
- * @brief Sets gradients of params to zero.
- */
-void GPT2::zero_grad(){
-    memset(grad, 0, num_params * sizeof(float));
-}
-
-/**
- * @brief Update the parameters of the model using Adam
- *
- * @param t timestep, a.k.a. the exponent for beta1 and beta2 in the adam update.
- * 
- */
-void GPT2::update(const int t){
-    for (size_t i = 0; i < num_params; i++){
-        float g_ = grad[i];
-
-        m[i] = beta1 * m[i] + (1-beta1)*g_;
-        v[i] = beta2 * v[i] + (1-beta2)*g_*g_;
-
-        float mhat = m[i] / (1 - powf(beta1, t));
-        float vhat = v[i] / (1 - powf(beta2, t));
-
-
-        params[i] -= alpha * mhat / (sqrtf(vhat) + 1e-8);
-
-    }
 }
 
 /**

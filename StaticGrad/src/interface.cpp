@@ -1,8 +1,10 @@
 #include "datastream.hpp"
 #include "tokenizer.hpp"
 #include "gpt2.hpp"
+#include "optimizer.hpp"
 #include "interface.hpp"
 #include "utils.hpp"
+#include <deque>
 
 const std::string PREFIX = REPO_PREFIX;
 
@@ -11,13 +13,15 @@ const std::string PREFIX = REPO_PREFIX;
  *
  * Args:
  *   @param model: Pointer to instance of GPT2
+ *   @param tk : Pointer to the tokenizer
  *   @param out: The output node where the computed loss will be stored, a 2D tensor of shape (B, T).
  *   @param in: The input node containing the logits, a 3D tensor of shape (B, T, V).
  *   @param t: Desired position of next token in sequence
  *
  *   @return The most probable token for that position
  */
-uint16_t next_token(GPT2*& model,
+std::string next_token(GPT2*& model,
+                     Tokenizer*& tk,
                      Node*& out,
                      Node*& in,
                      const size_t t){
@@ -40,7 +44,42 @@ uint16_t next_token(GPT2*& model,
     float* logits = out->act + (t-1)*V;
     uint16_t next_tok = sample_token(logits, V, true);
 
-    return next_tok;
+    in->act[t] = next_tok;
+
+    std::string next_tok_dec = tk->decode({next_tok});
+
+    return next_tok_dec;
+}
+
+size_t prepare_for_gen(GPT2*& model, Tokenizer*& tk, Node*& in, std::string start){
+    model->clear_kv_cache();
+    size_t T = in->shape[1];
+    size_t t;
+    uint16_t eot = 50256;
+    if (start.empty()){
+        for (size_t i = 0; i < T; i++){
+            in->act[i] = eot;
+        }
+        t = 1;
+    }
+
+    else {
+
+        std::vector<uint16_t> encoded = tk->encode(start);
+        size_t num_tokens = encoded.size();
+
+        for (size_t i = 0; i < num_tokens; i++){
+            in->act[i] = encoded[i];
+        }
+
+        for (size_t i = num_tokens; i < T; i++){
+            in->act[i] = eot;
+        }
+
+        t = num_tokens;
+    }
+
+    return t;
 }
 
 /**
@@ -60,55 +99,14 @@ void yap(GPT2*& model,
          Node*& in,
          const std::string start){
 
-    // clear kv cache
-    model->clear_kv_cache();
-
-    size_t T = in->shape[1];
-    uint16_t eot = 50256;
-    size_t t; // for next_token call
-
-    std::string decoded_tokens = start;
-
-    if (start.empty() ){
-
-        for (size_t i = 0; i < T; i++){
-            in->act[i] = eot;
-        }
-
-        t = 1;
-    }
-
-    else {
-
-        std::vector<uint16_t> encoded = tk->encode(start);
-        size_t num_tokens = encoded.size();
-
-        for (size_t i = 0; i < num_tokens; i++){
-            in->act[i] = encoded[i];
-        }
-
-        for (size_t i = num_tokens; i < T; i++){
-            in->act[i] = eot;
-        }
-
-        t = num_tokens;
-
-    }
+    size_t t = prepare_for_gen(model, tk, in, start);
 
     // autogenerate tokens
     std::cout << start;
-    for (size_t i = t; i < T; i++){
-        uint16_t next_tok = next_token(model, out, in, i);
-        
-        in->act[i] = next_tok;
-        std::string next_tok_dec = tk->decode({next_tok});
-        std::cout << next_tok_dec << std::flush;
-
-        decoded_tokens += next_tok_dec;
+    for (size_t i = t; i < in->shape[1]; i++){
+        std::string next_tok = next_token(model, tk, out, in, i);
+        std::cout << next_tok << std::flush;
     }
-
-    // clear kv cache
-    model->clear_kv_cache();
 }
 
 /**
@@ -212,12 +210,36 @@ void setup_activations(Activation*& activations,
     activations->point_nodes(out, in);
 }
 
+/**
+ * @brief Initializes the Optimizer.
+ * 
+ * This function creates a new optimizer instance.
+ * 
+ * @param opt Pointer to the optimizer instance. Must be `nullptr` before calling.
+ * @param model Pointer to a GPT2 instance.alignas
+ * @param opt_name the name of the optimizer
+ * 
+ */
+void setup_optimizer(Optimizer*& opt,
+                     GPT2*& model,
+                     optimizer_t opt_name)
+{
+    switch (opt_name){
+        case ADAM:
+            opt = new Adam(model->num_params, model->params, model->grad);
+            break;
+        default:
+            opt = new Adam(model->num_params, model->params, model->grad);
+            break;
+    }
+}
 
 
 /**
 * Allocates and initializes the GPT-2 model, data stream, tokenizer, activations, and nodes for a specified batch size and sequence length.
 *
 *  @param model A pointer (passed by reference) to a GPT-2 model that will be allocated and initialized.
+*  @param opt   A pointer (passed by reference) to an Optimizer instance that will be initialized
 *  @param ds A pointer (passed by reference) to a DataStream that will be allocated and initialized.
 *  @param tk A pointer (passed by reference) to a Tokenizer that will be allocated and initialized.
 *  @param activations A pointer (passed by reference) to an Activation object that will be allocated and initialized.
@@ -235,6 +257,7 @@ void setup_activations(Activation*& activations,
 *  @note - The tokenizer is initialized with the vocabulary from GPT-2.
 */
 void setup(GPT2*& model,
+           Optimizer*& opt,
            DataStream*& ds,
            Tokenizer*& tk,
            Activation*& activations,
@@ -249,6 +272,7 @@ void setup(GPT2*& model,
     }
 
     setup_model(model, pretrained);
+    setup_optimizer(opt, model, ADAM); // hardcoded ADAM optimizer
     setup_datastream(ds, B*T);
     setup_tokenizer(tk);
     setup_activations(activations, out, in, B, T, model);
@@ -282,6 +306,7 @@ void setup(GPT2*& model,
 *   @note - All passed pointers are set to nullptr.
 */
 void tear_down(GPT2*& model,
+               Optimizer*& opt,
                DataStream*& ds,
                Tokenizer*& tk,
                Activation*& activations,
@@ -291,7 +316,19 @@ void tear_down(GPT2*& model,
     teardown_activations(activations, out, in);
     teardown_tokenizer(tk);
     teardown_datastream(ds);
+    teardown_optimizer(opt);
     teardown_model(model);
+}
+
+/**
+ * @brief Deallocates and resets the Optimizer instance.
+ * 
+ * 
+ * @param opt Pointer to the Optimizer instance. Must be a valid pointer or `nullptr`.
+ */
+void teardown_optimizer(Optimizer*& opt){
+    delete opt;
+    opt = nullptr;
 }
 
 /**
@@ -370,6 +407,7 @@ void teardown_activations(Activation*& activations,
 void train(const int max_batches){
     // setup model
     GPT2* model = nullptr;
+    Optimizer* opt = nullptr;
     DataStream* ds = nullptr;
     Tokenizer* tk = nullptr;
     Activation* activations = nullptr;
@@ -379,7 +417,7 @@ void train(const int max_batches){
     size_t T = 64;
     bool pretrained = true;
 
-    setup(model, ds, tk, activations, out, in, B, T, pretrained);
+    setup(model, opt, ds, tk, activations, out, in, B, T, pretrained);
 
     in->current_T = T; // use all positions for training
     
@@ -406,12 +444,12 @@ void train(const int max_batches){
         float m_loss = mean_loss(loss);
         std::cout << "iteration " << t << ": loss = " << m_loss << std::endl;
 
-        model->zero_grad(); // zero gradients of parameters
+        opt->zero_grad(); // zero gradients of parameters
         activations->zero_grad(); // zero gradients of activations
 
         sftmax_ce->backward(loss, out, (ds->buffer) + 1); // do backward through crossentropy loss and softmax
         model->backward(out, in);
-        model->update(t+1);
+        opt->update();
     }
 
     delete sftmax_ce;
@@ -420,7 +458,7 @@ void train(const int max_batches){
     delete[] loss->act_grads;
     delete loss;
 
-    tear_down(model, ds, tk, activations, out, in);
+    tear_down(model, opt, ds, tk, activations, out, in);
 }
 
 

@@ -20,9 +20,7 @@ class GPT2 {
 
         ~GPT2();
 
-        void zero_grad();
         void load_weights(const std::string& fname);
-        void update(const int t); 
 
         void forward(Node* out, Node* in);
         void backward(Node* out, Node* in);
@@ -44,13 +42,6 @@ class GPT2 {
 
         float* params;
         float* grad;
-
-
-        float* m; // first moment for adam
-        float* v; // second moment for adam
-        float beta1;
-        float beta2;
-        float alpha; // learn rate
 
 };
 

@@ -16,6 +16,7 @@ int main(int argc, char **argv) {
 
     // setup model pointers and data structures
     GPT2* model = nullptr;
+    Optimizer* opt = nullptr;
     DataStream* ds = nullptr;
     Tokenizer* tk = nullptr;
     Activation* activations = nullptr;
@@ -33,5 +34,5 @@ int main(int argc, char **argv) {
     yap(model, tk, out, in, start);
 
     // deallocate memory
-    tear_down(model, ds, tk, activations, out, in);
+    tear_down(model, opt, ds, tk, activations, out, in);
 }
