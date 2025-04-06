@@ -51,6 +51,18 @@ std::string next_token(GPT2*& model,
     return next_tok_dec;
 }
 
+/**
+ * 
+ * @brief Helper function for `yap` that prepares the model for generatation, given a piece of input text. 
+ *
+ * Args:
+ *   @param model: Pointer to instance of GPT2
+ *   @param tk : Pointer to the tokenizer
+ *   @param in: The input node containing the logits, a 3D tensor of shape (B, T, V).
+ *   @param start: input string
+ *
+ *   @return t, the position in the sequence that will be predicted next
+ */
 size_t prepare_for_gen(GPT2*& model, Tokenizer*& tk, Node*& in, std::string start){
     model->clear_kv_cache();
     size_t T = in->shape[1];
@@ -295,6 +307,7 @@ void setup(GPT2*& model,
 * Deallocates the memory allocated by the setup function.
 *
 * @param model A pointer (passed by reference) to the GPT-2 model to be deallocated.
+* @param opt A pointer (passed by reference) to an Optimizer instance
 * @param ds A pointer (passed by reference) to the DataStream to be deallocated.
 * @param tk A pointer (passed by reference) to the Tokenizer to be deallocated.
 * @param activations A pointer (passed by reference) to the Activation object to be deallocated.
