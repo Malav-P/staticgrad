@@ -72,10 +72,12 @@ class LayerNorm : public Operation {
 class Matmul : public Operation {
     public :
         float multiplier;
+        bool bias;
         
-        Matmul(float* params_, float* grad_, float multiplier_ = 1.0):
+        Matmul(float* params_, float* grad_, float multiplier_ = 1.0, bool bias_ = true):
             Operation(params_, grad_),
-            multiplier(multiplier_){}
+            multiplier(multiplier_),
+            bias(bias_){}
         
         void forward(Node* out, Node* in) override;
         void backward(Node* out, Node* in) override;
@@ -142,17 +144,13 @@ class TransformerBlock : public Operation {
 
         LayerNorm* ln1;
         Matmul* mat1;
-        RowAdd* ra1;
         Attention* att;
         Matmul* mat2;
-        RowAdd* ra2;
         Add* res1;
         LayerNorm* ln2;
         Matmul* mat3;
-        RowAdd* ra3;
         GELU* gelu;
         Matmul* mat4;
-        RowAdd* ra4;
         Add* res2;
 
         TransformerBlock(float* params_, float* grad_, const size_t C, const size_t NH); // constructor

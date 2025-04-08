@@ -10,7 +10,7 @@ size_t gpt2_num_acts(const size_t B, const size_t T, const size_t C, const size_
 // get number of parameters to malloc for gpt2 parameters
 size_t gpt2_memrequirement(const size_t C, const size_t L, const size_t vocab_size, const size_t max_seqlen);
 
-class GPT2 {
+class GPT2 : public Operation {
     public:
 
         GPT2(size_t C_, size_t L_, size_t V_, size_t maxT_, size_t NH_); // parameterized constructor
@@ -39,9 +39,6 @@ class GPT2 {
         std::vector<TransformerBlock*> tblocks; // vector of TransformerBlocks
         LayerNorm* final_layernorm; // final layer norm
         Matmul* unembedding; // unembedding 
-
-        float* params;
-        float* grad;
 
 };
 

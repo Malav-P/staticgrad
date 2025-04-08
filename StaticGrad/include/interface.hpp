@@ -67,6 +67,9 @@ void tear_down(GPT2*& model,
                Node*& out,
                Node*& in);
 
+// clear kv cache
+void clear_cache(GPT2*& model);
+
             
 void train(const int max_batches);
 

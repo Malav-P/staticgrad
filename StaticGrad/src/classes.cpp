@@ -208,23 +208,14 @@ TransformerBlock::TransformerBlock(float* params_, float* grad_, const size_t C,
 
 
         mat1 = new Matmul(layer_param, layer_grad);
-        layer_param += C * 3*C;
-        layer_grad +=  C * 3*C;
-
-
-        ra1 = new RowAdd(layer_param, layer_grad);
-        layer_param += 3*C;
-        layer_grad += 3*C;
+        layer_param += C * 3*C + 3*C;
+        layer_grad +=  C * 3*C + 3*C;
 
         att = new Attention(NH);
 
         mat2 = new Matmul(layer_param, layer_grad);
-        layer_param += C*C;
-        layer_grad +=  C*C;
-
-        ra2 = new RowAdd(layer_param, layer_grad);
-        layer_param += C;
-        layer_grad += C;
+        layer_param += C*C + C;
+        layer_grad +=  C*C + C;
 
         res1 = new Add();
 
@@ -233,22 +224,14 @@ TransformerBlock::TransformerBlock(float* params_, float* grad_, const size_t C,
         layer_grad += C + C;
 
         mat3 = new Matmul(layer_param, layer_grad);
-        layer_param += C * 4*C;
-        layer_grad += C * 4*C;
-
-        ra3 = new RowAdd(layer_param, layer_grad);
-        layer_param += 4*C;
-        layer_grad += 4*C;
+        layer_param += C * 4*C + 4*C;
+        layer_grad += C * 4*C + 4*C;
 
         gelu = new GELU();
 
         mat4 = new Matmul(layer_param, layer_grad);
-        layer_param += 4*C * C;
-        layer_grad += 4*C * C;
-
-        ra4 = new RowAdd(layer_param, layer_grad);
-        layer_param += C;
-        layer_grad += C;
+        layer_param += 4*C * C + C;
+        layer_grad += 4*C * C + C;
 
         res2 = new Add();
 }
@@ -273,81 +256,73 @@ void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
     res1_node->shape = in->shape;
     res1_node->size = in->size;
 
-    Node* in_internal = new Node();
-    in_internal->act = in->act;
-    in_internal->act_grads = in->act_grads;
-    in_internal->shape = in->shape;
-    in_internal->size = in->size;
-    in_internal->current_T = in->current_T;
+    Node* input = new Node();
+    input->act = in->act;
+    input->act_grads = in->act_grads;
+    input->shape = in->shape;
+    input->size = in->size;
+    input->current_T = in->current_T;
 
 
-    Node* out_internal = new Node();
-    out_internal->act = in_internal->act + B * T * C;
-    out_internal->act_grads = in_internal->act_grads + B * T * C;
-    out_internal->shape = {B, T, C};
-    out_internal->size = B * T * C;
-    out_internal->current_T = in->current_T;
-
-
-    // out should be of the same shape as in, should place a check here.
+    Node* output = new Node();
+    output->act = input->act + B * T * C;
+    output->act_grads = input->act_grads + B * T * C;
+    output->shape = {B, T, C};
+    output->size = B * T * C;
+    output->current_T = in->current_T;
 
     // first layer norm
-    ln1->forward(out_internal, in_internal);
+    ln1->forward(output, input);
 
     // first matmul and bias
-    shift(out_internal, in_internal, {B, T, 3*C});
-    mat1->forward(out_internal, in_internal);
-    ra1->forward(out_internal, out_internal); // in place
+    shift(output, input, {B, T, 3*C});
+    mat1->forward(output, input);
     
     // attention
-    shift(out_internal, in_internal, {B, T, C});
-    att->forward(out_internal, in_internal);
+    shift(output, input, {B, T, C});
+    att->forward(output, input);
 
     // second matmul and bias
-    shift(out_internal, in_internal, {B, T, C});
-    mat2->forward(out_internal, in_internal);
-    ra2->forward(out_internal, out_internal); // in place
+    shift(output, input, {B, T, C});
+    mat2->forward(output, input);
 
     // residual
-    res1->forward(out_internal, res1_node); // in place
+    res1->forward(output, res1_node); // in place
 
     // store activations for second residual
-    res2_node->act = out_internal->act;
-    res2_node->act_grads = out_internal->act_grads;
-    res2_node->shape = out_internal->shape;
-    res2_node->size = out_internal->size;
+    res2_node->act = output->act;
+    res2_node->act_grads = output->act_grads;
+    res2_node->shape = output->shape;
+    res2_node->size = output->size;
 
     // second layer norm
-    shift(out_internal, in_internal, {B, T, C});
-    ln2->forward(out_internal, in_internal);
+    shift(output, input, {B, T, C});
+    ln2->forward(output, input);
 
     // third matmul and bias
-    shift(out_internal, in_internal, {B, T, 4*C});
-    mat3->forward(out_internal, in_internal); // (B, T, C) -> (B, T, 4*C)
-    ra3->forward(out_internal, out_internal); // in place (B, T, 4*C) -> (B, T, 4*C)
+    shift(output, input, {B, T, 4*C});
+    mat3->forward(output, input); // (B, T, C) -> (B, T, 4*C)
 
     // GELU
-    shift(out_internal, in_internal, {B, T, 4*C}); 
-    gelu->forward(out_internal, in_internal); // (B, T, 4C) - > (B, T, 4C)
+    shift(output, input, {B, T, 4*C}); 
+    gelu->forward(output, input); // (B, T, 4C) - > (B, T, 4C)
 
     // fourth matmul and bias
-    shift(out_internal, in_internal, {B, T, C});
-    mat4->forward(out_internal, in_internal);
-    ra4->forward(out_internal, out_internal); // in place (B, T, 4C) -> (B, T, C)
-
+    shift(output, input, {B, T, C});
+    mat4->forward(output, input);
 
     // second residual
-    res2->forward(out_internal, res2_node); // in place (B, T, C) -> (B, T, C)
+    res2->forward(output, res2_node); // in place (B, T, C) -> (B, T, C)
 
 
     // verify that results are in out Node
-    if ((out_internal->act != out->act) || (out_internal->act_grads != out->act_grads) || (out_internal->size != out->size)){
-        throw std::runtime_error("out node and out_internal node are not equal in transformer block");
+    if ((output->act != out->act) || (output->act_grads != out->act_grads) || (output->size != out->size)){
+        throw std::runtime_error("out node and output node are not equal in transformer block");
     }
 
     // free memory of helper nodes
-    delete in_internal;
-    delete out_internal;
+    delete input;
+    delete output;
 
 }
 
@@ -366,69 +341,65 @@ void TransformerBlock::backward(Node* out, Node* in){
     size_t T = in->shape[1];
     size_t C = in->shape[2];
 
-    Node* out_internal = new Node();
-    out_internal->act = out->act;
-    out_internal->act_grads = out->act_grads;
-    out_internal->shape = out->shape;
-    out_internal->size = out->size;
+    Node* output = new Node();
+    output->act = out->act;
+    output->act_grads = out->act_grads;
+    output->shape = out->shape;
+    output->size = out->size;
 
-    Node* in_internal = new Node();
-    in_internal->act = out->act - B * T * 4*C;
-    in_internal->act_grads = out->act_grads - B * T * 4*C;
-    in_internal->shape = {B, T, 4*C};
-    in_internal->size = B * T * 4*C;
+    Node* input = new Node();
+    input->act = out->act - B * T * 4*C;
+    input->act_grads = out->act_grads - B * T * 4*C;
+    input->shape = {B, T, 4*C};
+    input->size = B * T * 4*C;
 
     // backward through second residual
-    res2->backward(out_internal, res2_node);
+    res2->backward(output, res2_node);
 
     // backward through fourth matmul and bias
-    ra4->backward(out_internal, out_internal);
-    mat4->backward(out_internal, in_internal);
+    mat4->backward(output, input);
 
     // backward through GELU
-    shift_back(out_internal, in_internal, {B, T, 4*C}); // (B, T, 4*C) is input shape of GELU operation
-    gelu->backward(out_internal, in_internal);
+    shift_back(output, input, {B, T, 4*C}); // (B, T, 4*C) is input shape of GELU operation
+    gelu->backward(output, input);
 
     // backward through third matmul and bias
-    shift_back(out_internal, in_internal, {B, T, C}); // (B, T, C) is input shape of matmul operation
-    ra3->backward(out_internal, out_internal);
-    mat3->backward(out_internal, in_internal);
+    shift_back(output, input, {B, T, C}); // (B, T, C) is input shape of matmul operation
+    mat3->backward(output, input);
 
     // backward through second layernorm
-    shift_back(out_internal, in_internal, {B, T, C}); // (B, T, C) is the input shape of layernorm operation
-    ln2->backward(out_internal, in_internal);
+    shift_back(output, input, {B, T, C}); // (B, T, C) is the input shape of layernorm operation
+    ln2->backward(output, input);
 
     // backward through first residual
-    shift_back(out_internal, in_internal, {B, T, C}); // (B, T, C) is input shape of res1
-    res1->backward(out_internal, res1_node);
+    shift_back(output, input, {B, T, C}); // (B, T, C) is input shape of res1
+    res1->backward(output, res1_node);
 
     // backward through second matmul and bias
-    ra2->backward(out_internal, out_internal);
-    mat2->backward(out_internal, in_internal);
+    mat2->backward(output, input);
 
     // backward through attention
-    shift_back(out_internal, in_internal, {B, T, 3*C}); // (B, T, 3*C) is input shape of attention
-    att->backward(out_internal, in_internal);
+    shift_back(output, input, {B, T, 3*C}); // (B, T, 3*C) is input shape of attention
+    att->backward(output, input);
 
     // backward through first matmul and bias
-    shift_back(out_internal, in_internal, {B, T, C}); // (B, T, C) is input shape of matmul operatnion
-    ra1->backward(out_internal, out_internal);
-    mat1->backward(out_internal, in_internal);
+    shift_back(output, input, {B, T, C}); // (B, T, C) is input shape of matmul operatnion
+    mat1->backward(output, input);
 
     // backward through first layernorm
-    shift_back(out_internal, in_internal, {B, T, C}); // (B, T, C) is input shape of layernorm
-    ln1->backward(out_internal, in_internal);
+    shift_back(output, input, {B, T, C}); // (B, T, C) is input shape of layernorm
+    ln1->backward(output, input);
 
     // verify that results are in 'in' Node
-    if ((in_internal->act != in->act) || (in_internal->act_grads != in->act_grads) || (in_internal->size != in->size)){
-        std::string errorMessage = "in node and in_internal node are not equal. Difference of pointer locations: " + std::to_string(in_internal->act - in->act);
+    if ((input->act != in->act) || (input->act_grads != in->act_grads) || (input->size != in->size)){
+        std::string errorMessage = "in node and input node are not equal. Difference of pointer locations: " + std::to_string(input->act - in->act);
         throw std::runtime_error(errorMessage);
         
     }
 
     // free allocated memory for helper nodes
-    delete out_internal;
-    delete in_internal;
+    delete output;
+    delete input;
 
 }
 
@@ -438,14 +409,14 @@ void TransformerBlock::backward(Node* out, Node* in){
  */
 TransformerBlock::~TransformerBlock(){
     delete res2;
-    delete ra4; delete mat4;
+    delete mat4;
     delete gelu;
-    delete ra3; delete mat3;
+    delete mat3;
     delete ln2;
     delete res1;
-    delete ra2; delete mat2;
+    delete mat2;
     delete att;
-    delete ra1; delete mat1;
+    delete mat1;
     delete ln1;
 
     delete res1_node;
@@ -892,8 +863,18 @@ void Matmul::forward(Node* out, Node* in) {
 
         cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                     M, N, K, alpha, A, lda, B_, ldb, beta, out_, ldc);
+        
+        if (bias){
+            float* param_b = params + C*OC;
+            for (size_t t = 0; t < current_T; t++){
+                for (size_t c = 0; c < OC; c++){
+                    out_[t*OC + c] += param_b[c];
+                }
+            }
+        }
 
     }
+
 }
 
 
@@ -945,6 +926,15 @@ void Matmul::forward2(Node* out, Node* in) {
         cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
                     M, N, K, alpha, A, lda, B_, ldb, beta, C_, ldc);
 
+        if (bias){
+            float* param_b = params + C*OC;
+            for (size_t t = 0; t < current_T; t++){
+                for (size_t c = 0; c < OC; c++){
+                    C_[t*OC + c] += param_b[c];
+                }
+            }
+        }
+
     }
 }
 
@@ -970,16 +960,27 @@ void Matmul::backward(Node* out, Node* in) {
     float* B_ = params;
     float* dLdB = grad;
 
+
     for (size_t b = 0; b < B; b++){
 
         float* A = in->act + b * m * k;
         float* dLdA = in->act_grads + b * m * k;
         float* dLdC = out->act_grads + b * m * n;
 
+        // gradient wrt bias
+        if (bias){
+            float* grad_b = grad + k*n;
+            for (size_t t = 0; t < m; t++){
+                for (size_t c = 0; c < n; c++){
+                    grad_b[c] += dLdC[t*n + c];
+                }
+            }
+        }
+
         // gradient wrt input
         cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
                     m, k, n, alpha, dLdC, n, B_, n, beta, dLdA, k);
-        // gradient wrt parameters
+        // gradient wrt weights
         cblas_sgemm(CblasRowMajor, CblasTrans, CblasNoTrans,
                     p, n, m, alpha, A, k, dLdC, n, beta, dLdB, n);
 
@@ -1019,6 +1020,16 @@ void Matmul::backward2(Node* out, Node* in) {
         float* A = in->act + b * T * C;
         float* dLdA = in->act_grads + b * T * C;
         float* dLdC = out->act_grads + b * T * OC;
+
+        // gradient wrt bias
+        if (bias){
+            float* grad_b = grad + OC*C;
+            for (size_t t = 0; t < T; t++){
+                for (size_t c = 0; c < OC; c++){
+                    grad_b[c] += dLdC[t*OC + c];
+                }
+            }
+        }
 
         // gradient wrt input
         M = T; // rows of dL/dC and dL/dA

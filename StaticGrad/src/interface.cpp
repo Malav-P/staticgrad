@@ -8,6 +8,10 @@
 
 const std::string PREFIX = REPO_PREFIX;
 
+void clear_cache(GPT2*& model){
+    model->clear_kv_cache();
+}
+
 /**
  * Computes the most probable token at specified position
  *
@@ -119,6 +123,8 @@ void yap(GPT2*& model,
         std::string next_tok = next_token(model, tk, out, in, i);
         std::cout << next_tok << std::flush;
     }
+    
+    model->clear_kv_cache();
 }
 
 /**

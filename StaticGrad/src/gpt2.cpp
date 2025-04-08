@@ -111,6 +111,7 @@ GPT2::GPT2(const size_t C_,
            const size_t V_,
            const size_t maxT_,
            const size_t NH_):
+    Operation(nullptr, nullptr),
     C(C_),
     L(L_),
     V(V_),
@@ -140,7 +141,7 @@ GPT2::GPT2(const size_t C_,
         p += C + C;
         g += C + C;
 
-        unembedding = new Matmul(params, grad);
+        unembedding = new Matmul(params, grad, 1.0f, false);
 
         if (p - params != static_cast<int>(num_params) || g - grad != static_cast<int>(num_params)){
             throw std::runtime_error("parameter allocation incorrect");
@@ -167,15 +168,18 @@ GPT2::~GPT2(){
 
 /**
  * 
- * @brief Clear the key-value caches of all transformer blocks
+ * @brief Clear the key-value caches and their gradient buffers of all transformer blocks
  * 
  */
 void GPT2::clear_kv_cache(){
     for (auto& tblock : tblocks){
         delete[] tblock->att->buffer;
+        delete[] tblock->att->dbuffer;
         tblock->att->buffer = nullptr;
+        tblock->att->dbuffer= nullptr;
     }
 }
+
 
 
 /**
