@@ -85,7 +85,7 @@ void shift_back(Node* out, Node* in, const std::vector<size_t> shape_){
  * The position embeddings are stored in the rest of the 'params' array, with the next C * maxT elements representing the position embeddings.
  * The embedded representation is stored in the 'act' member of the out node.
  */
-void Encoder::forward(Node* out, Node* in){
+void Embedding::forward(Node* out, Node* in){
 
     size_t B = in->shape[0];
     size_t T = in->shape[1];
@@ -126,14 +126,14 @@ void Encoder::forward(Node* out, Node* in){
  * @param in The input tensor of shape (B, T). Each element in the input tensor corresponds to an integer representing the token ID.
  *
  * @note 
- * - The function assumes that the gradient buffer (grad) of the Encoder class is properly allocated and has enough space to accommodate the gradients of wte and wpe.
+ * - The function assumes that the gradient buffer (grad) of the Embedding class is properly allocated and has enough space to accommodate the gradients of wte and wpe.
  * The gradients of wte are stored in the first part of the grad buffer, and the gradients of wpe are stored in the second part, following the layout: [wte_gradients, wpe_gradients].
  * 
  * @note
  * - The input `in` is expected to contain token indices (floating-point values) that are
  *       subsequently cast to `long int` to access the corresponding embeddings.
  */
-void Encoder::backward(Node* out, Node* in){
+void Embedding::backward(Node* out, Node* in){
 
     // out is (B, T, C)
     // wte is (V, C)
@@ -195,43 +195,46 @@ TransformerBlock::TransformerBlock(float* params_, float* grad_, const size_t C,
             throw std::invalid_argument("C must be divisible by NH");
         }
 
+        input = new Node();
+        output = new Node();
+
         res1_node = new Node();
         res2_node = new Node();
 
-        float* layer_param = params_;
-        float* layer_grad = grad_;
+        float* p = params_;
+        float* g = grad_;
 
 
-        ln1 = new LayerNorm(layer_param, layer_grad);
-        layer_param += C + C; // C weights and C biases
-        layer_grad += C + C;
+        ln1 = new LayerNorm(p, g);
+        p += C + C; // C weights and C biases
+        g += C + C;
 
 
-        mat1 = new Matmul(layer_param, layer_grad);
-        layer_param += C * 3*C + 3*C;
-        layer_grad +=  C * 3*C + 3*C;
+        mat1 = new Matmul(p, g);
+        p += C * 3*C + 3*C;
+        g +=  C * 3*C + 3*C;
 
         att = new Attention(NH);
 
-        mat2 = new Matmul(layer_param, layer_grad);
-        layer_param += C*C + C;
-        layer_grad +=  C*C + C;
+        mat2 = new Matmul(p, g);
+        p += C*C + C;
+        g +=  C*C + C;
 
         res1 = new Add();
 
-        ln2 = new LayerNorm(layer_param, layer_grad);
-        layer_param += C + C;
-        layer_grad += C + C;
+        ln2 = new LayerNorm(p, g);
+        p += C + C;
+        g += C + C;
 
-        mat3 = new Matmul(layer_param, layer_grad);
-        layer_param += C * 4*C + 4*C;
-        layer_grad += C * 4*C + 4*C;
+        mat3 = new Matmul(p, g);
+        p += C * 4*C + 4*C;
+        g += C * 4*C + 4*C;
 
         gelu = new GELU();
 
-        mat4 = new Matmul(layer_param, layer_grad);
-        layer_param += 4*C * C + C;
-        layer_grad += 4*C * C + C;
+        mat4 = new Matmul(p, g);
+        p += 4*C * C + C;
+        g += 4*C * C + C;
 
         res2 = new Add();
 }
@@ -256,7 +259,6 @@ void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
     res1_node->shape = in->shape;
     res1_node->size = in->size;
 
-    Node* input = new Node();
     input->act = in->act;
     input->act_grads = in->act_grads;
     input->shape = in->shape;
@@ -264,7 +266,7 @@ void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
     input->current_T = in->current_T;
 
 
-    Node* output = new Node();
+
     output->act = input->act + B * T * C;
     output->act_grads = input->act_grads + B * T * C;
     output->shape = {B, T, C};
@@ -320,9 +322,6 @@ void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
         throw std::runtime_error("out node and output node are not equal in transformer block");
     }
 
-    // free memory of helper nodes
-    delete input;
-    delete output;
 
 }
 
@@ -341,13 +340,12 @@ void TransformerBlock::backward(Node* out, Node* in){
     size_t T = in->shape[1];
     size_t C = in->shape[2];
 
-    Node* output = new Node();
     output->act = out->act;
     output->act_grads = out->act_grads;
     output->shape = out->shape;
     output->size = out->size;
 
-    Node* input = new Node();
+
     input->act = out->act - B * T * 4*C;
     input->act_grads = out->act_grads - B * T * 4*C;
     input->shape = {B, T, 4*C};
@@ -397,10 +395,6 @@ void TransformerBlock::backward(Node* out, Node* in){
         
     }
 
-    // free allocated memory for helper nodes
-    delete output;
-    delete input;
-
 }
 
 /**
@@ -422,7 +416,8 @@ TransformerBlock::~TransformerBlock(){
     delete res1_node;
     delete res2_node;
 
-
+    delete input;
+    delete output;
 }
 
 /**
@@ -452,7 +447,7 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
     int half_buffer_size = num_heads*B*lrint(T*(T+1)/2);
 
     size_t start;
-    if (buffer != nullptr){ // kv cache exists
+    if (buffer){ // kv cache exists
         start = current_T - 1;
     }
     else { // kv cache does not exist (this should always be the case during training)
@@ -703,10 +698,17 @@ void LayerNorm::forward(Node* out, Node* in) { // (B, T, C) -> (B, T, C)
 
     size_t current_T = in->current_T;
 
+    if (!(rstd && B*T <= size)){
+        delete[] rstd;
+        rstd = new float[B*T];
+        size = B*T;
+    }
 
-    delete[] rstd; delete[] m;
-    rstd = new float[B*T];
-    m = new float[B*T];
+    if (!(m && B*T <= size)){
+        delete[] m;
+        m = new float[B*T];
+        size = B*T;
+    }
 
 
     float eps = 1e-5; // division by zero prevention during normalization

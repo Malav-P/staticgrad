@@ -117,7 +117,10 @@ GPT2::GPT2(const size_t C_,
     V(V_),
     maxT(maxT_),
     NH(NH_)
-    {
+    {   
+        input = new Node();
+        output = new Node();
+
         num_params = gpt2_memrequirement(C, L, V, maxT);
 
         params = new float[num_params];
@@ -126,7 +129,7 @@ GPT2::GPT2(const size_t C_,
         float* p = params;
         float* g = grad;
 
-        encoder = new Encoder(p, g, C, V);
+        encoder = new Embedding(p, g, C, V);
         p += V*C + maxT*C;
         g += V*C + maxT*C;
 
@@ -164,6 +167,9 @@ GPT2::~GPT2(){
     
     delete[] grad;
     delete[] params;
+
+    delete input;
+    delete output;
 }
 
 /**
@@ -189,7 +195,7 @@ void GPT2::clear_kv_cache(){
  * of shape (B, T, V), where B is the batch size, T is the sequence length, and V is the 
  * vocabulary size. The forward pass involves the following major components:
  * 
- * - Encoder: Token and positional embedding of sequence into latent space.
+ * - Embedding: Token and positional embedding of sequence into latent space.
  * 
  * - Transformer Blocks: A sequence of self-attention and feed-forward neural networks that process the encoded input.
  * 
@@ -211,57 +217,53 @@ void GPT2::forward(Node* out, Node* in){
     size_t T = in->shape[1];
     
     // forward through the encoder 
-    Node* in_internal = new Node();
-    in_internal->act = in->act;
-    in_internal->act_grads = in->act_grads;
-    in_internal->shape = in->shape;
-    in_internal->size = in->size;
-    in_internal->current_T = in->current_T;
+    input->act = in->act;
+    input->act_grads = in->act_grads;
+    input->shape = in->shape;
+    input->size = in->size;
+    input->current_T = in->current_T;
 
-    Node* out_internal = new Node();
-    out_internal->act = in_internal->act + B * T;
-    out_internal->act_grads = in_internal->act_grads + B * T; 
-    out_internal->shape = {B, T, C}; // output shape of encoder
-    out_internal->size = B * T * C;
-    out_internal->current_T = in->current_T;
+    output->act = input->act + B * T;
+    output->act_grads = input->act_grads + B * T; 
+    output->shape = {B, T, C}; // output shape of encoder
+    output->size = B * T * C;
+    output->current_T = in->current_T;
 
 
-    encoder->forward(out_internal, in_internal);
+    encoder->forward(output, input);
 
     // forward through the transformer blocks
     for (size_t i = 0; i < L; i++){
         TransformerBlock* tblock = tblocks[i];
 
-        // set up in_internal and out_internal
-        in_internal->act = out_internal->act;
-        in_internal->act_grads = out_internal->act_grads;
-        in_internal->shape = out_internal->shape;
-        in_internal->size = out_internal->size;
+        // set up input and output
+        input->act = output->act;
+        input->act_grads = output->act_grads;
+        input->shape = output->shape;
+        input->size = output->size;
 
-        out_internal->act += 16 * B*T*C; // 16*B*T*C is the number of activations used in a tblock
-        out_internal->act_grads += 16 * B*T*C;
-        out_internal->shape = {B, T, C};
-        out_internal->size = B*T*C;
+        output->act += 16 * B*T*C; // 16*B*T*C is the number of activations used in a tblock
+        output->act_grads += 16 * B*T*C;
+        output->shape = {B, T, C};
+        output->size = B*T*C;
 
         // forward through i-th TransformerBlock
-        tblock->forward(out_internal, in_internal);
+        tblock->forward(output, input);
     }
 
     // forward through layernorm
-    shift(out_internal, in_internal, {B, T, C});
-    final_layernorm->forward(out_internal, in_internal);
+    shift(output, input, {B, T, C});
+    final_layernorm->forward(output, input);
 
     // forward through unembedding (matmul)
-    shift(out_internal, in_internal, {B, T, V});
-    unembedding->forward2(out_internal, in_internal); // (B, T, C) - > (B, T, V)
+    shift(output, input, {B, T, V});
+    unembedding->forward2(output, input); // (B, T, C) - > (B, T, V)
 
     // verify that results are in out Node
-    if ((out_internal->act != out->act) || (out_internal->act_grads != out->act_grads) || (out_internal->size != out->size)){
-        throw std::runtime_error("out node and out_internal node are not equal");
+    if ((output->act != out->act) || (output->act_grads != out->act_grads) || (output->size != out->size)){
+        throw std::runtime_error("out node and output node are not equal");
     }
 
-    delete in_internal;
-    delete out_internal;
 
 }
 
@@ -283,54 +285,51 @@ void GPT2::backward(Node* out, Node* in){
     size_t B = in->shape[0];
     size_t T = in->shape[1];
 
-    Node* out_internal = new Node();
-    out_internal->act = out->act;
-    out_internal->act_grads = out->act_grads;
-    out_internal->shape = out->shape; 
-    out_internal->size = out->size;
+    output->act = out->act;
+    output->act_grads = out->act_grads;
+    output->shape = out->shape; 
+    output->size = out->size;
 
-    Node* in_internal = new Node();
-    in_internal->shape = {B, T, C};
-    in_internal->size = B*T*C;
-    in_internal->act = out->act - in_internal->size;
-    in_internal->act_grads = out->act_grads - in_internal->size;
+    input->shape = {B, T, C};
+    input->size = B*T*C;
+    input->act = out->act - input->size;
+    input->act_grads = out->act_grads - input->size;
 
-    unembedding->backward2(out_internal, in_internal);
+    unembedding->backward2(output, input);
 
     // backward through layernorm
-    shift_back(out_internal, in_internal, {B, T, C});
-    final_layernorm->backward(out_internal, in_internal);
+    shift_back(output, input, {B, T, C});
+    final_layernorm->backward(output, input);
 
     // backward through the transformer blocks 
     for (int i = L-1; i >=0 ; i--){  // the loop variable i must be int not size_t, otherwise it will crash the code
         TransformerBlock* tblock = tblocks[i];
 
-        // set up in_internal and out_internal
-        out_internal->act = in_internal->act;
-        out_internal->act_grads = in_internal->act_grads;
-        out_internal->shape = in_internal->shape;
-        out_internal->size = in_internal->size;
+        // set up input and output
+        output->act = input->act;
+        output->act_grads = input->act_grads;
+        output->shape = input->shape;
+        output->size = input->size;
 
-        in_internal->act -= 16 * B*T*C; // 16*B*T*C is the number of activations used in a tblock
-        in_internal->act_grads -= 16*B*T*C;
-        in_internal->shape = {B, T, C};
-        in_internal->size = B*T*C;
+        input->act -= 16 * B*T*C; // 16*B*T*C is the number of activations used in a tblock
+        input->act_grads -= 16*B*T*C;
+        input->shape = {B, T, C};
+        input->size = B*T*C;
 
         // backward through i-th TransformerBlock
-        tblock->backward(out_internal, in_internal);
+        tblock->backward(output, input);
     }
 
     // backwards through encoder
-    shift_back(out_internal, in_internal, {B, T});
-    encoder->backward(out_internal, in_internal);
+    shift_back(output, input, {B, T});
+    encoder->backward(output, input);
 
     // verify that results are in out Node
-    if ((in_internal->act != in->act) || (in_internal->act_grads != in->act_grads) || (in_internal->size != in->size)){
-        throw std::runtime_error("in node and in_internal node are not equal");
+    if ((input->act != in->act) || (input->act_grads != in->act_grads) || (input->size != in->size)){
+        throw std::runtime_error("in node and input node are not equal");
     }
 
-    delete in_internal;
-    delete out_internal;
+ 
 }
 
 

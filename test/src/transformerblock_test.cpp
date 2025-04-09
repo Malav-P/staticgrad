@@ -160,40 +160,24 @@ TEST_F(TransformerBlockTest, ParameterAllocation) {
 	EXPECT_EQ(tblock->mat1->grad - tblock->ln1->grad, 2*c);
 
 	// first matmul
-	EXPECT_EQ(tblock->ra1->params - tblock->mat1->params, 3*c*c);
-	EXPECT_EQ(tblock->ra1->grad - tblock->mat1->grad, 3*c*c);
-
-	// first row add
-	EXPECT_EQ(tblock->mat2->params - tblock->ra1->params, 3*c);
-	EXPECT_EQ(tblock->mat2->grad - tblock->ra1->grad, 3*c);
+	EXPECT_EQ(tblock->mat2->params - tblock->mat1->params, 3*c*c + 3*c);
+	EXPECT_EQ(tblock->mat2->grad - tblock->mat1->grad, 3*c*c + 3*c);
 
 	// second matmul
-	EXPECT_EQ(tblock->ra2->params - tblock->mat2->params, c*c);
-	EXPECT_EQ(tblock->ra2->grad - tblock->mat2->grad, c*c);
-
-	// second rowadd
-	EXPECT_EQ(tblock->ln2->params - tblock->ra2->params, c);
-	EXPECT_EQ(tblock->ln2->grad - tblock->ra2->grad, c);
+	EXPECT_EQ(tblock->ln2->params - tblock->mat2->params, c*c + c);
+	EXPECT_EQ(tblock->ln2->grad - tblock->mat2->grad, c*c + c);
 
 	// second layernorm
 	EXPECT_EQ(tblock->mat3->params - tblock->ln2->params, 2*c);
 	EXPECT_EQ(tblock->mat3->grad - tblock->ln2->grad, 2*c);
 
 	// third matmul
-	EXPECT_EQ(tblock->ra3->params - tblock->mat3->params, 4*c*c);
-	EXPECT_EQ(tblock->ra3->grad - tblock->mat3->grad, 4*c*c);
-
-	// third rowadd
-	EXPECT_EQ(tblock->mat4->params - tblock->ra3->params, 4*c);
-	EXPECT_EQ(tblock->mat4->grad - tblock->ra3->grad, 4*c);
+	EXPECT_EQ(tblock->mat4->params - tblock->mat3->params, 4*c*c + 4*c);
+	EXPECT_EQ(tblock->mat4->grad - tblock->mat3->grad, 4*c*c + 4*c);
 
 	// fourth matmul
-	EXPECT_EQ(tblock->ra4->params - tblock->mat4->params, 4*c*c);
-	EXPECT_EQ(tblock->ra4->grad - tblock->mat4->grad, 4*c*c);
-
-	// fourth row add
-	EXPECT_EQ(params + 12*C*C + 13*C - tblock->ra4->params, c);
-	EXPECT_EQ(params_grad + 12*C*C + 13*C- tblock->ra4->grad, c);
+	EXPECT_EQ(params + 12*C*C + 13*C - tblock->mat4->params, 4*c*c + c);
+	EXPECT_EQ(params_grad + 12*C*C + 13*C - tblock->mat4->grad, 4*c*c + c);
 
 
 	delete tblock;

@@ -67,8 +67,8 @@ void tear_down(GPT2*& model,
                Node*& out,
                Node*& in);
 
-// clear kv cache
-void clear_cache(GPT2*& model);
+// clear kv cache and reset activations (the latter is hypothesized to help cache timing as it speeds up inference)
+void clear_cache(GPT2*& model, Activation*& activations);
 
             
 void train(const int max_batches);

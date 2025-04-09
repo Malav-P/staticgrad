@@ -37,6 +37,8 @@ class Activation {
         void zero_grad();
         void point_nodes(Node* in, Node* out);
 
+        void reset();
+
 };
 
 #endif // NODE_HPP

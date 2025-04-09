@@ -8,8 +8,9 @@
 
 const std::string PREFIX = REPO_PREFIX;
 
-void clear_cache(GPT2*& model){
+void clear_cache(GPT2*& model, Activation*& activations){
     model->clear_kv_cache();
+    activations->reset();
 }
 
 /**
@@ -46,6 +47,7 @@ std::string next_token(GPT2*& model,
     model->forward(out, in);
 
     float* logits = out->act + (t-1)*V;
+
     uint16_t next_tok = sample_token(logits, V, true);
 
     in->act[t] = next_tok;

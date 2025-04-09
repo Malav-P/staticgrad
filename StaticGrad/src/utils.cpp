@@ -6,22 +6,7 @@
 #include <cfloat>
 #include <algorithm>
 
-/**
- * Samples a token from a given probability distribution.
- *
- * 
- *   @param logits: A pointer to the logits, an array of length `length`.
- *   @param length: The number of elements in the probability distribution.
- *   @param random: A boolean flag indicating whether to sample randomly or deterministically.
- *
- *   @return `token`: The sampled token.
- *
- *   @throws `std::invalid_argument` if the probabilities are not valid (i.e., non-negative and summing up to 1).
- */
-uint16_t sample_token(const float* logits, const size_t length, const bool random){
-
-    float* probabilities = new float[length];
-
+void logits_to_prob(const float* logits, float* probabilities, const size_t length){
     float maxval = -FLT_MAX;
     for (size_t t2 = 0; t2 < length; t2++){
         
@@ -57,6 +42,24 @@ uint16_t sample_token(const float* logits, const size_t length, const bool rando
     if (std::abs(sum - 1.0f) > 1e-3) {
         throw std::invalid_argument("Probabilities must sum up to 1");
     }
+}
+
+/**
+ * Samples a token from a given probability distribution.
+ *
+ * 
+ *   @param logits: A pointer to the logits, an array of length `length`.
+ *   @param length: The number of elements in the probability distribution.
+ *   @param random: A boolean flag indicating whether to sample randomly or deterministically.
+ *
+ *   @return `token`: The sampled token.
+ *
+ */
+uint16_t sample_token(const float* logits, const size_t length, const bool random){
+
+    float* probabilities = new float[length];
+
+    logits_to_prob(logits, probabilities, length);
 
     uint16_t token;
 
@@ -75,7 +78,6 @@ uint16_t sample_token(const float* logits, const size_t length, const bool rando
     delete[] probabilities;
 
     return token;
-    
 }
 
 

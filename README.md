@@ -9,6 +9,7 @@ git clone https://github.com/Malav-P/staticgrad.git
 cd staticgrad
 mkdir build && cd build
 cmake ..
+make install # optional, for downstream users who want to use StaticGrad libary
 ```
 
 ## Get Weights and Vocab

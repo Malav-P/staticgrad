@@ -2,7 +2,7 @@
 #include "classes.hpp"
 #include "test_common.hpp"
 
-class EncoderTest : public ::testing::Test {
+class EmbeddingTest : public ::testing::Test {
 	protected:
 		void SetUp() override {
 			B = 2;
@@ -32,14 +32,14 @@ class EncoderTest : public ::testing::Test {
 		Node* out;
 };
 
-TEST_F(EncoderTest, Forward) {
+TEST_F(EmbeddingTest, Forward) {
 
     size_t maxT = T + 1;
 
     float* params = new float[vocab_size*C + maxT*C];
     fillArrayWithRandom(params, vocab_size*C + maxT*C);
 
-	Encoder* encoder = new Encoder(params, nullptr, C, vocab_size);
+	Embedding* encoder = new Embedding(params, nullptr, C, vocab_size);
 
 	// fill input with tokens
     for (size_t i = 0; i < in->size; i++){
@@ -61,13 +61,13 @@ TEST_F(EncoderTest, Forward) {
     delete[] params;
 }
 
-TEST_F(EncoderTest, Backward) {
+TEST_F(EmbeddingTest, Backward) {
 
     size_t maxT = T + 1;
 
     float* grad_ = new float[vocab_size*C + maxT*C]{0};
 
-	Encoder* encoder = new Encoder(nullptr, grad_, C, vocab_size);
+	Embedding* encoder = new Embedding(nullptr, grad_, C, vocab_size);
 
     float* wte_g = encoder->grad;
 	float* wpe_g = encoder->grad + C*vocab_size;

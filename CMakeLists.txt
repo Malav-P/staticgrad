@@ -90,7 +90,7 @@ if (BUILD_TESTING)
 
     # Define and add test executables
     set(TESTS
-        att add layernorm matmul encoder transformerblock gpt2 utils datastream tokenizer interface inference train
+        att add layernorm matmul embedding transformerblock gpt2 utils datastream tokenizer interface inference train
     )
 
     foreach(test ${TESTS})

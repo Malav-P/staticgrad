@@ -23,12 +23,12 @@ class Operation {
 
 };
 
-class Encoder: public Operation {
+class Embedding: public Operation {
     public:
         size_t vocab_size;
         size_t C;
 
-        Encoder(float* params_, float* grad_, size_t C_, size_t vocab_size_):
+        Embedding(float* params_, float* grad_, size_t C_, size_t vocab_size_):
             Operation(params_, grad_),
             vocab_size(vocab_size_),
             C(C_){}
@@ -51,13 +51,15 @@ class LayerNorm : public Operation {
     public:
 
         float* rstd;
-        float* m; 
+        float* m;
+        size_t size;
     
 
         LayerNorm(float* params_, float* grad_):
         Operation(params_, grad_),
         rstd(nullptr),
-        m(nullptr){}
+        m(nullptr),
+        size(0){}
 
         void forward(Node* out, Node* in) override;
         void backward(Node* out, Node* in) override;
@@ -141,6 +143,9 @@ class TransformerBlock : public Operation {
 
         Node* res1_node;
         Node* res2_node;
+
+        Node* input;
+        Node* output;
 
         LayerNorm* ln1;
         Matmul* mat1;

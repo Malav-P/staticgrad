@@ -50,7 +50,7 @@ TEST_F(MatmulTest, Forward) {
 
    initialize(B, T, C, OC);
 
-   Matmul* matmul = new Matmul(params, nullptr);
+   Matmul* matmul = new Matmul(params, nullptr, 1.0, false);
 
    // Fill input and output arrays with random values
    fillArrayWithRandom(in->act, in->size);
@@ -85,7 +85,7 @@ TEST_F(MatmulTest, Forward2) {
 
    initialize(B, T, C, OC);
 
-   Matmul* matmul = new Matmul(params, grad);
+   Matmul* matmul = new Matmul(params, grad, 1.0, false);
 
 
    // input is (1, 2, 3) tensor. [1, 2, 3
@@ -127,7 +127,7 @@ TEST_F(MatmulTest, Backward) {
 
    initialize(B, T, C, OC);
 
-	Matmul* matmul = new Matmul(params, grad);
+	Matmul* matmul = new Matmul(params, grad, 1.0, false);
 
 	// Fill data
 	std::memset(in->act_grads, 0, in->size * sizeof(float));
@@ -185,7 +185,7 @@ TEST_F(MatmulTest, Backward2) {
 
    initialize(B, T, C, OC);
 
-	Matmul* matmul = new Matmul(params, grad);
+	Matmul* matmul = new Matmul(params, grad, 1.0, false);
 
 	// Fill data
 	std::memset(in->act_grads, 0, in->size * sizeof(float));
@@ -242,7 +242,7 @@ TEST_F(MatmulTest, InputNull) {
    size_t OC = 5;
 
    initialize(B, T, C, OC);
-   Matmul* matmul = new Matmul(params, nullptr);
+   Matmul* matmul = new Matmul(params, nullptr, 1.0, false);
 
    delete[] in->act;
    in->act = nullptr;
@@ -259,7 +259,7 @@ TEST_F(MatmulTest, OutputNull) {
    size_t OC = 5;
 
    initialize(B, T, C, OC);
-   Matmul* matmul = new Matmul(params, nullptr);
+   Matmul* matmul = new Matmul(params, nullptr, 1.0, false);
 
    delete[] out->act;
    out->act = nullptr;

@@ -35,10 +35,13 @@ class GPT2 : public Operation {
 
         size_t num_params; // number of parameters
 
-        Encoder* encoder; // encoder
+        Embedding* encoder; // encoder
         std::vector<TransformerBlock*> tblocks; // vector of TransformerBlocks
         LayerNorm* final_layernorm; // final layer norm
         Matmul* unembedding; // unembedding 
+
+        Node* input;
+        Node* output;
 
 };
 

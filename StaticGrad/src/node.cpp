@@ -57,8 +57,16 @@ V(V_)
     size += B*T*V;
 
     act = new float[size];
-    act_grads = new float[size];     
+    act_grads = new float[size]; 
+    
+    this->reset();
 }
+
+void Activation::reset(){
+    // experimental: touch memory to improve cache coherence
+    memset(act, 0, size*sizeof(float));
+}
+
 
 /**
  * @brief Frees allocated memory for activations and gradients.
