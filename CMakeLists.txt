@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.10)
 project(StaticGrad)
 
 message(STATUS "This is the source dir: ${CMAKE_SOURCE_DIR}")
-option(BUILD_TESTING "Build unit tests" ON)
+option(BUILD_TESTING "Build unit tests" OFF)
 
 
 # Compiler settings

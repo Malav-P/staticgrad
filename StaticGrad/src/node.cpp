@@ -63,7 +63,7 @@ V(V_)
 }
 
 void Activation::reset(){
-    // experimental: touch memory to improve cache coherence
+    // experimental: touch memory to improve cache timing
     memset(act, 0, size*sizeof(float));
 }
 
