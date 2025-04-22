@@ -8,8 +8,8 @@
 class Optimizer {
     public :
         size_t num_params;
-        float* params;
-        float* grad;
+        void** params_ptr;
+        void** grad_ptr;
         float lr;
         
         /**
@@ -17,15 +17,15 @@ class Optimizer {
          * @brief Base class constructor
          * 
          * @param num_params_ the number of parameters this optimizer is responsible for
-         * @param params_ pointer to contiguos array of parameters
-         * @param grad_ pointer to contiguous array of gradients of parameters
+         * @param params_ address of pointer to contiguos array of parameters
+         * @param grad_ address of pointer to contiguous array of gradients of parameters
          * @param lr_ learning rate
          *
          */
-        Optimizer(size_t num_params_, float* params_, float* grad_, float lr_ = 0.0001):
+        Optimizer(size_t num_params_, void** params_, void** grad_, float lr_ = 0.0001):
             num_params(num_params_),
-            params(params_),
-            grad(grad_),
+            params_ptr(params_),
+            grad_ptr(grad_),
             lr(lr_) {}
 
         /**
@@ -60,7 +60,7 @@ class Optimizer {
          * 
          */
         void zero_grad(){
-            memset(grad, 0, num_params * sizeof(float));
+            memset(*grad_ptr, 0, num_params * sizeof(float));
         }
 };
 
@@ -83,14 +83,14 @@ class Adam : public Optimizer {
          * @brief Adam class constructor
          * 
          * @param num_params_ the number of parameters this optimizer is responsible for
-         * @param params_ pointer to contiguos array of parameters
-         * @param grad_ pointer to contiguous array of gradients of parameters
+         * @param params_ address of pointer to contiguos array of parameters
+         * @param grad_ address of pointer to contiguous array of gradients of parameters
          * @param lr_ learning rate
          * @param beta1_ first moment hyperparameter
          * @param beta2_ second moment hyperparameter
          *
          */
-        Adam(size_t num_params_, float* params_, float* grad_, float lr_=0.0001, float beta1_ = 0.9 , float beta2_ =0.999):
+        Adam(size_t num_params_, void** params_, void** grad_, float lr_=0.0001, float beta1_ = 0.9 , float beta2_ =0.999):
         Optimizer(num_params_, params_, grad_, lr_),
         beta1(beta1_),
         beta2(beta2_),
@@ -118,8 +118,10 @@ class Adam : public Optimizer {
          * 
          */
         void update(){
+            float* g = (float*)(*grad_ptr);
+            float* p = (float*)(*params_ptr);
             for (size_t i = 0; i < num_params; i++){
-                float g_ = grad[i];
+                float g_ = g[i];
         
                 m[i] = beta1 * m[i] + (1-beta1)*g_;
                 v[i] = beta2 * v[i] + (1-beta2)*g_*g_;
@@ -128,7 +130,7 @@ class Adam : public Optimizer {
                 float vhat = v[i] / (1 - powf(beta2, t));
         
         
-                params[i] -= lr * mhat / (sqrtf(vhat) + 1e-8);
+                p[i] -= lr * mhat / (sqrtf(vhat) + 1e-8);
         
             }
             t+=1;

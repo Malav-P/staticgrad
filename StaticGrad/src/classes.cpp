@@ -93,8 +93,8 @@ void Embedding::forward(Node* out, Node* in){
     size_t current_T = in->current_T;
 
 
-    float* wte = params;
-    float* wpe = params + C * vocab_size;
+    float* wte = (float*)params;
+    float* wpe = ((float*)params) + C * vocab_size;
 
     for (size_t b = 0; b < B; b++){
         for (size_t t = 0; t < current_T; t++){
@@ -142,8 +142,8 @@ void Embedding::backward(Node* out, Node* in){
     size_t B = in->shape[0];
     size_t T = in->shape[1];
 
-    float* wte_g = grad;
-    float* wpe_g = grad + C * vocab_size;
+    float* wte_g = (float*)grad;
+    float* wpe_g = ((float*)grad) + C * vocab_size;
 
     for (size_t b = 0; b < B; b++){
         for (size_t t = 0; t < T; t++){
@@ -186,8 +186,9 @@ void Embedding::backward(Node* out, Node* in){
  * @note 
  * - The constructor dynamically allocates memory for various internal nodes and layers. Hence, it is crucial to handle exceptions during construction.
  */
-TransformerBlock::TransformerBlock(float* params_, float* grad_, const size_t C, const size_t NH):
+TransformerBlock::TransformerBlock(void* params_, void* grad_, const size_t C_, const size_t NH):
     Operation(params_, grad_),
+    C(C_),
     res1_node(nullptr),
     res2_node(nullptr) {
 
@@ -201,42 +202,69 @@ TransformerBlock::TransformerBlock(float* params_, float* grad_, const size_t C,
         res1_node = new Node();
         res2_node = new Node();
 
-        float* p = params_;
-        float* g = grad_;
-
+        float* p = (float*)params_;
+        float* g = (float*)grad_;
 
         ln1 = new LayerNorm(p, g);
-        p += C + C; // C weights and C biases
-        g += C + C;
+        p = p ? p + C + C : p; // C weights and C biases
+        g = g ? g + C + C : g;
 
 
         mat1 = new Matmul(p, g);
-        p += C * 3*C + 3*C;
-        g +=  C * 3*C + 3*C;
+        p =  p ? p + C * 3*C + 3*C : p;
+        g =  g ? g + C * 3*C + 3*C : g;
 
         att = new Attention(NH);
 
         mat2 = new Matmul(p, g);
-        p += C*C + C;
-        g +=  C*C + C;
+        p =  p ? p + C*C + C : p;
+        g =  g ? g + C*C + C : g;
 
         res1 = new Add();
 
         ln2 = new LayerNorm(p, g);
-        p += C + C;
-        g += C + C;
+        p = p ? p + C + C : p;
+        g = g ? g + C + C : g;
 
         mat3 = new Matmul(p, g);
-        p += C * 4*C + 4*C;
-        g += C * 4*C + 4*C;
+        p = p ? p + C * 4*C + 4*C : p;
+        g = g ? g + C * 4*C + 4*C : g;
 
         gelu = new GELU();
 
         mat4 = new Matmul(p, g);
-        p += 4*C * C + C;
-        g += 4*C * C + C;
+        p = p ? p + 4*C * C + C : p;
+        g = g ? g + 4*C * C + C : g;
 
         res2 = new Add();
+}
+
+void TransformerBlock::set_grad(void* grad_){
+    if (!grad){
+        grad = grad_;
+        char* g = (char*)grad_;
+
+        ln1->set_grad(g);
+        g += sizeof(float) * (C + C);
+
+        mat1->set_grad(g);
+        g += sizeof(float) * (C * 3*C + 3*C);
+
+        mat2->set_grad(g);
+        g += sizeof(float) * (C*C + C);
+
+        ln2->set_grad(g);
+        g += sizeof(float) * (C + C);
+
+        mat3->set_grad(g);
+        g += sizeof(float) * (C * 4*C + 4*C);
+
+        mat4->set_grad(g);
+        g += sizeof(float) * (4*C * C + C);
+    }
+    else{
+        throw std::runtime_error("grad pointer not null, cannot set!");
+    }
 }
 
 
@@ -740,8 +768,8 @@ void LayerNorm::forward(Node* out, Node* in) { // (B, T, C) -> (B, T, C)
             // write to output
             float* out_ = out->act + b*T*C + t*C;
             float rstd_ = 1.0f / sqrtf(v+ eps);
-            float* w_ = params;
-            float* b_ = params+C;
+            float* w_ = (float*)params;
+            float* b_ = ((float*)params)+C;
 
             for (size_t i = 0; i < C; i++){
                 float norm_inp = rstd_* (inp[i] - m_);
@@ -774,10 +802,10 @@ void LayerNorm::backward(Node* out, Node* in){
     size_t C = in->shape[2];
 
 
-    float* w_g = grad;
-    float* b_g = grad+C;
+    float* w_g = (float*)grad;
+    float* b_g = ((float*)grad)+C;
 
-    float* w = params;
+    float* w = (float*)params;
 
     for (size_t b = 0; b < B; b++){
         for (size_t t = 0; t < T; t++){
@@ -847,7 +875,7 @@ void Matmul::forward(Node* out, Node* in) {
     size_t current_T = in->current_T;
     
     float alpha = multiplier, beta = 0.0f;
-    float* B_ = params;
+    float* B_ = (float*)params;
 
     int M = current_T; // rows of A and C
     int N = OC; // columns of B and C
@@ -867,7 +895,7 @@ void Matmul::forward(Node* out, Node* in) {
                     M, N, K, alpha, A, lda, B_, ldb, beta, out_, ldc);
         
         if (bias){
-            float* param_b = params + C*OC;
+            float* param_b = ((float*)params) + C*OC;
             for (size_t t = 0; t < current_T; t++){
                 for (size_t c = 0; c < OC; c++){
                     out_[t*OC + c] += param_b[c];
@@ -909,7 +937,7 @@ void Matmul::forward2(Node* out, Node* in) {
 
     
     float alpha = multiplier, beta = 0.0f;
-    float* B_ = params;
+    float* B_ = (float*)params;
 
     int M = current_T; // rows of A and C
     int N = OC; // columns of trans(B) and C
@@ -929,7 +957,7 @@ void Matmul::forward2(Node* out, Node* in) {
                     M, N, K, alpha, A, lda, B_, ldb, beta, C_, ldc);
 
         if (bias){
-            float* param_b = params + C*OC;
+            float* param_b = ((float*)params) + C*OC;
             for (size_t t = 0; t < current_T; t++){
                 for (size_t c = 0; c < OC; c++){
                     C_[t*OC + c] += param_b[c];
@@ -959,8 +987,8 @@ void Matmul::backward(Node* out, Node* in) {
     size_t p = k, n = out->shape[2];
     float alpha = multiplier, beta = 1.0f;
 
-    float* B_ = params;
-    float* dLdB = grad;
+    float* B_ = (float*)params;
+    float* dLdB = (float*)grad;
 
 
     for (size_t b = 0; b < B; b++){
@@ -971,7 +999,7 @@ void Matmul::backward(Node* out, Node* in) {
 
         // gradient wrt bias
         if (bias){
-            float* grad_b = grad + k*n;
+            float* grad_b = ((float*)grad) + k*n;
             for (size_t t = 0; t < m; t++){
                 for (size_t c = 0; c < n; c++){
                     grad_b[c] += dLdC[t*n + c];
@@ -1013,8 +1041,8 @@ void Matmul::backward2(Node* out, Node* in) {
 
     int M, N, K, lda, ldb, ldc;
 
-    float* B_ = params;
-    float* dLdB = grad;
+    float* B_ = (float*)params;
+    float* dLdB = (float*)grad;
 
 
     for (size_t b = 0; b < B; b++){
@@ -1025,7 +1053,7 @@ void Matmul::backward2(Node* out, Node* in) {
 
         // gradient wrt bias
         if (bias){
-            float* grad_b = grad + OC*C;
+            float* grad_b = ((float*)grad) + OC*C;
             for (size_t t = 0; t < T; t++){
                 for (size_t c = 0; c < OC; c++){
                     grad_b[c] += dLdC[t*OC + c];
@@ -1146,6 +1174,8 @@ void RowAdd::forward(Node* out, Node* in){
 
     size_t current_T = in->current_T;
 
+    float* p = (float*)params;
+
 
     for (size_t b = 0; b < B; b++){
 
@@ -1154,7 +1184,7 @@ void RowAdd::forward(Node* out, Node* in){
 
         for (size_t t = 0; t < current_T; t++){
             for (size_t c = 0; c < C; c++){
-                out_[t*C + c] = inp0[t*C + c] + params[c];
+                out_[t*C + c] = inp0[t*C + c] + p[c];
             }
         }
     }
@@ -1180,7 +1210,7 @@ void RowAdd::forward(Node* out, Node* in){
 void RowAdd::backward(Node* out, Node* in){
 
     float* inp0_g = in->act_grads;
-    float* inp1_g = grad;
+    float* inp1_g = (float*)grad;
     float* out_g = out->act_grads;
 
     // backward pass for first input

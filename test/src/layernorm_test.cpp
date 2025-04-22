@@ -49,9 +49,11 @@ class LayerNormTest : public ::testing::Test {
 TEST_F(LayerNormTest, ForwardPass) {
 	fillArrayWithRandom(in->act, in->size);
 
+  float* p = (float*)layer_norm->params;
+
 	for (size_t i = 0; i<C; i++){
-		layer_norm->params[i] = 1.0f;
-		layer_norm->params[i+C] = 0.0f;
+		p[i] = 1.0f;
+		p[i+C] = 0.0f;
 	}
 
 	layer_norm->forward(out, in);
@@ -81,9 +83,11 @@ TEST_F(LayerNormTest, ForwardPass) {
 TEST_F(LayerNormTest, ScaleShift) {
   fillArrayWithRandom(in->act, in->size);
 
+  float* p = (float*)layer_norm->params;
+
   for (size_t i = 0; i<C; i++){
-      layer_norm->params[i] = 2.0f;
-      layer_norm->params[i+C] = 1.0f;
+      p[i] = 2.0f;
+      p[i+C] = 1.0f;
   }
 
   layer_norm->forward(out, in);
@@ -110,35 +114,21 @@ TEST_F(LayerNormTest, ScaleShift) {
 
   // Check that the output values are scaled and shifted correctly
   for (size_t i = 0; i < C; i++) {
-    float expected = layer_norm->params[i] * (layer_norm->rstd[0])*(in->act[i] - layer_norm->m[0]) + layer_norm->params[i + C];
+    float expected = p[i] * (layer_norm->rstd[0])*(in->act[i] - layer_norm->m[0]) + p[i + C];
     EXPECT_NEAR(out->act[i], expected, 1e-5);
   }
 }
 
-// TEST_F(LayerNormTest, NullData) {
-//   delete[] in->act;
-//   in->act = nullptr;
-
-//   // This should throw an exception or return an error
-//   EXPECT_THROW(layer_norm->forward(out, in), std::invalid_argument);
-// }
-
-// TEST_F(LayerNormTest, DifferentSize) {
-//   delete[] in->act;
-//   in->act = new float[100];
-//   in->size = 100;
-//   in->shape = {1, 100};
-
-//   // This should throw an exception or return an error
-//   EXPECT_THROW(layer_norm->forward(out, in), std::invalid_argument);
-// }
 
 TEST_F(LayerNormTest, Backward){
+
+  float* p = (float*)layer_norm->params;
+  float* g = (float*)layer_norm->grad;
 
 	// do forward pass
 
 	fillArrayWithRandom(in->act, in->size);
-	fillArrayWithRandom(layer_norm->params, 2*C);
+	fillArrayWithRandom(p, 2*C);
 
 	layer_norm->forward(out, in);
 
@@ -146,7 +136,7 @@ TEST_F(LayerNormTest, Backward){
 
 	fillArrayWithOnes(out->act_grads, out->size);
 
-	std::memset(layer_norm->grad, 0, 2*C*sizeof(float));
+	std::memset(g, 0, 2*C*sizeof(float));
 	std::memset(in->act_grads, 0, in->size * sizeof(float));
 
 	layer_norm->backward(out, in);
@@ -159,7 +149,7 @@ TEST_F(LayerNormTest, Backward){
 				expected += out->act_grads[b*T*C + t*C + i];
 			}
 		}
-		EXPECT_FLOAT_EQ(layer_norm->grad[C + i], expected);
+		EXPECT_FLOAT_EQ(g[C + i], expected);
 	}
 
 	// Check scale (weight) gradients
@@ -170,7 +160,7 @@ TEST_F(LayerNormTest, Backward){
 				expected += out->act_grads[b*T*C + t*C + i] * (in->act[b*T*C + t*C + i] - layer_norm->m[b*T + t]) * layer_norm->rstd[b*T + t];
 			}
 		}
-		EXPECT_FLOAT_EQ(layer_norm->grad[i], expected);
+		EXPECT_FLOAT_EQ(g[i], expected);
 	}
 
 	// TODO Check input gradients

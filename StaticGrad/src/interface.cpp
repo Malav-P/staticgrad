@@ -246,10 +246,10 @@ void setup_optimizer(Optimizer*& opt,
 {
     switch (opt_name){
         case ADAM:
-            opt = new Adam(model->num_params, model->params, model->grad);
+            opt = new Adam(model->num_params, &(model->params), &(model->grad));
             break;
         default:
-            opt = new Adam(model->num_params, model->params, model->grad);
+            opt = new Adam(model->num_params, &(model->params) , &(model->grad));
             break;
     }
 }
@@ -451,7 +451,7 @@ void train(const int max_batches){
 
     SoftmaxCrossEntropy* sftmax_ce = new SoftmaxCrossEntropy();
 
-
+    model->train_mode();
 
     // begin training
     for (int t = 0; t < max_batches; t++){

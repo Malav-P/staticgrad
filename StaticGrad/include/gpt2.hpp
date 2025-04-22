@@ -27,6 +27,8 @@ class GPT2 : public Operation {
 
         void clear_kv_cache();
 
+        void train_mode();
+
         const size_t C;    // embedding dimension (default 768)
         const size_t L;    // number of transformer blocks (default 12)
         const size_t V;    // vocab size (default 50257)
@@ -34,6 +36,7 @@ class GPT2 : public Operation {
         const size_t NH;   // number of attention heads
 
         size_t num_params; // number of parameters
+        size_t num_bytes; // number of bytes parameters use
 
         Embedding* encoder; // encoder
         std::vector<TransformerBlock*> tblocks; // vector of TransformerBlocks

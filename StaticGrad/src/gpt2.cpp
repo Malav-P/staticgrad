@@ -123,33 +123,70 @@ GPT2::GPT2(const size_t C_,
 
         num_params = gpt2_memrequirement(C, L, V, maxT);
 
-        params = new float[num_params];
-        grad = new float[num_params];
+        num_bytes = num_params * sizeof(float);
 
-        float* p = params;
-        float* g = grad;
+        params = malloc(num_bytes);
+        grad = nullptr;
+
+        float* p = (float*)params;
+        float* g = (float*)grad;
 
         encoder = new Embedding(p, g, C, V);
-        p += V*C + maxT*C;
-        g += V*C + maxT*C;
+        p = p ? p + V*C + maxT*C : p;
+        g = g ? g + V*C + maxT*C : g;
 
 
         for (size_t l = 0 ; l < L; l++){
             tblocks.push_back(new TransformerBlock(p, g, C, NH));
-            p += (12*C*C + 13*C);
-            g += (12*C*C + 13*C);
+            p = p ? p + (12*C*C + 13*C) : p;
+            g = g ? g + (12*C*C + 13*C) : g;
         }
 
         final_layernorm = new LayerNorm(p, g);
-        p += C + C;
-        g += C + C;
+        p = p ? p + C + C : p;
+        g = g ? g + C + C : g;
 
         unembedding = new Matmul(params, grad, 1.0f, false);
 
-        if (p - params != static_cast<int>(num_params) || g - grad != static_cast<int>(num_params)){
-            throw std::runtime_error("parameter allocation incorrect");
+        if (p){
+            if (p - (float*)params != static_cast<int>(num_params)){
+                throw std::runtime_error("parameter allocation incorrect");
+            }
         }
 
+        if (g){
+            if (g - (float*)grad != static_cast<int>(num_params)){
+                throw std::runtime_error("gradient allocation incorrect");
+            }
+        }
+
+
+}
+
+void GPT2::train_mode(){
+    if (grad){
+        return;
+    }
+
+    grad = malloc(num_bytes);
+
+    char* g = (char*)grad;
+
+    unembedding->set_grad(g);
+    encoder->set_grad(g);
+    g += (V*C + maxT*C) * sizeof(float);
+
+    for (size_t l = 0; l < L; l++){
+        tblocks[l]->set_grad(g);
+        g += (12*C*C + 13*C) * sizeof(float);
+    }
+
+    final_layernorm->set_grad(g);
+    g += (C + C) * sizeof(float);
+
+    if (g - (char*)grad != static_cast<int>(num_bytes)){
+        throw std::runtime_error("gradient allocation incorrect");
+    }
 }
 
 /**
@@ -165,8 +202,8 @@ GPT2::~GPT2(){
 
     delete encoder;
     
-    delete[] grad;
-    delete[] params;
+    free(grad);
+    free(params);
 
     delete input;
     delete output;

@@ -52,6 +52,7 @@ TEST_F(MatmulTest, Forward) {
 
    Matmul* matmul = new Matmul(params, nullptr, 1.0, false);
 
+
    // Fill input and output arrays with random values
    fillArrayWithRandom(in->act, in->size);
    fillArrayWithRandom(out->act, out->size);
@@ -128,10 +129,13 @@ TEST_F(MatmulTest, Backward) {
    initialize(B, T, C, OC);
 
 	Matmul* matmul = new Matmul(params, grad, 1.0, false);
+   float* p = (float*)matmul->params;
+   float* g = (float*)matmul->grad;
+
 
 	// Fill data
 	std::memset(in->act_grads, 0, in->size * sizeof(float));
-	std::memset(matmul->grad, 0, C*OC * sizeof(float));
+	std::memset(g, 0, C*OC * sizeof(float));
 	fillArrayWithOnes(out->act_grads, out->size);
 	fillArrayWithRandom(in->act, in->size);
 
@@ -144,7 +148,7 @@ TEST_F(MatmulTest, Backward) {
 
 				float expected = 0.0f;
 				for (size_t i = 0; i < OC; i++){
-					expected += matmul->params[ c*OC + i];
+					expected += p[ c*OC + i];
 				}
 				EXPECT_FLOAT_EQ(in->act_grads[b*T*C + t*C + c], expected);
 
@@ -167,7 +171,7 @@ TEST_F(MatmulTest, Backward) {
 		}
 
 		for (size_t j = 0 ; j < OC; j++){
-			EXPECT_FLOAT_EQ(matmul->grad[i*OC + j], expected);
+			EXPECT_FLOAT_EQ(g[i*OC + j], expected);
 		}
 
 	}
@@ -186,10 +190,13 @@ TEST_F(MatmulTest, Backward2) {
    initialize(B, T, C, OC);
 
 	Matmul* matmul = new Matmul(params, grad, 1.0, false);
+   float* p = (float*)matmul->params;
+   float* g = (float*)matmul->grad;
+
 
 	// Fill data
 	std::memset(in->act_grads, 0, in->size * sizeof(float));
-	std::memset(matmul->grad, 0, C*OC * sizeof(float));
+	std::memset(g, 0, C*OC * sizeof(float));
 	fillArrayWithOnes(out->act_grads, out->size);
 	fillArrayWithRandom(in->act, in->size);
 
@@ -202,7 +209,7 @@ TEST_F(MatmulTest, Backward2) {
 
 				float expected = 0.0f;
 				for (size_t i = 0; i < OC; i++){
-					expected += matmul->params[ c + i*C];
+					expected += p[ c + i*C];
 				}
 				EXPECT_FLOAT_EQ(in->act_grads[b*T*C + t*C + c], expected);
 
@@ -225,7 +232,7 @@ TEST_F(MatmulTest, Backward2) {
 		}
 
 		for (size_t j = 0 ; j < OC; j++){
-			EXPECT_FLOAT_EQ(matmul->grad[j*C + i], expected);
+			EXPECT_FLOAT_EQ(g[j*C + i], expected);
 		}
 
 	}

@@ -101,8 +101,11 @@ TEST_F(GPT2Test, Forward) {
         in->act[i] = distrib(gen);
     }
 
+    float* p = (float*)model->params;
+
+
     // fill parameters with random values between -1.0 and 1.0
-    fillArrayWithRandom(model->params, model->num_params);
+    fillArrayWithRandom(p, model->num_params);
 
     // check outputs are zero
     for (size_t i = 0; i < out->size; i++){
@@ -135,6 +138,8 @@ TEST_F(GPT2Test, Backward) {
 
     GPT2* model = new GPT2(C, L, V, maxT, NH);
 
+    model->train_mode();
+
     size_t num_act = gpt2_num_acts(B, T, C, L, V);
 
     float* acts = new float[num_act]();
@@ -163,8 +168,11 @@ TEST_F(GPT2Test, Backward) {
         in->act[i] = distrib(gen);
     }
 
+    float* p = (float*)model->params;
+
+
     // fill parameters with random values between -1.0 and 1.0
-    fillArrayWithRandom(model->params, model->num_params);
+    fillArrayWithRandom(p, model->num_params);
 
     // check outputs are zero
     for (size_t i = 0; i < out->size; i++){

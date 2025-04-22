@@ -9,17 +9,25 @@ void shift_back(Node* out, Node* in, const std::vector<size_t> shape_);
 
 class Operation {
     public :
-        Operation(float* params_, float* grad_):
+        Operation(void* params_, void* grad_):
             params(params_),
             grad(grad_) {}
 
-        float* params;
-        float* grad;
+        void* params;
+        void* grad;
 
         virtual ~Operation() {}
 
         virtual void forward(Node* out, Node* in) = 0;
         virtual void backward(Node* out, Node* in) = 0;
+        virtual void set_grad(void* grad_){
+            if (!grad){
+                grad = grad_;
+            }
+            else{
+                throw std::runtime_error("grad is not null, cannot set!");
+            }
+        }
 
 };
 
@@ -28,7 +36,7 @@ class Embedding: public Operation {
         size_t vocab_size;
         size_t C;
 
-        Embedding(float* params_, float* grad_, size_t C_, size_t vocab_size_):
+        Embedding(void* params_, void* grad_, size_t C_, size_t vocab_size_):
             Operation(params_, grad_),
             vocab_size(vocab_size_),
             C(C_){}
@@ -55,7 +63,7 @@ class LayerNorm : public Operation {
         size_t size;
     
 
-        LayerNorm(float* params_, float* grad_):
+        LayerNorm(void* params_, void* grad_):
         Operation(params_, grad_),
         rstd(nullptr),
         m(nullptr),
@@ -76,7 +84,7 @@ class Matmul : public Operation {
         float multiplier;
         bool bias;
         
-        Matmul(float* params_, float* grad_, float multiplier_ = 1.0, bool bias_ = true):
+        Matmul(void* params_, void* grad_, float multiplier_ = 1.0, bool bias_ = true):
             Operation(params_, grad_),
             multiplier(multiplier_),
             bias(bias_){}
@@ -128,7 +136,7 @@ class Add : public Operation {
 class RowAdd : public Operation {
     public :
 
-        RowAdd(float* params_, float* grad_):
+        RowAdd(void* params_, void* grad_):
             Operation(params_, grad_) { }
 
         void forward(Node* out, Node* in) override;
@@ -140,6 +148,8 @@ class RowAdd : public Operation {
 
 class TransformerBlock : public Operation {
     public:
+
+        size_t C; // model dimension
 
         Node* res1_node;
         Node* res2_node;
@@ -158,12 +168,13 @@ class TransformerBlock : public Operation {
         Matmul* mat4;
         Add* res2;
 
-        TransformerBlock(float* params_, float* grad_, const size_t C, const size_t NH); // constructor
+        TransformerBlock(void* params_, void* grad_, const size_t C_, const size_t NH); // constructor
         ~TransformerBlock(); // destructor
 
         
         void forward(Node* out, Node* in) override;
         void backward(Node* out, Node* in) override;
+        void set_grad(void* grad_) override;
 };
 
 #endif // CLASSES_HPP

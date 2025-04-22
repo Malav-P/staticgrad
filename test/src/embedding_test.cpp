@@ -34,12 +34,15 @@ class EmbeddingTest : public ::testing::Test {
 
 TEST_F(EmbeddingTest, Forward) {
 
+
     size_t maxT = T + 1;
 
     float* params = new float[vocab_size*C + maxT*C];
     fillArrayWithRandom(params, vocab_size*C + maxT*C);
 
 	Embedding* encoder = new Embedding(params, nullptr, C, vocab_size);
+	float* p = (float*)encoder->params;
+
 
 	// fill input with tokens
     for (size_t i = 0; i < in->size; i++){
@@ -49,8 +52,8 @@ TEST_F(EmbeddingTest, Forward) {
 	encoder->forward(out, in);
 
 	for (size_t i = 0; i < in->size; i++){
-        float* token_embed = encoder->params + i*C;
-        float* pos_embed = encoder->params + C * encoder->vocab_size + i%T * C;
+        float* token_embed = p + i*C;
+        float* pos_embed = p + C * encoder->vocab_size + i%T * C;
         float* out_bt = out->act + i*C;
         for (size_t j = 0; j < C; j++){
             EXPECT_FLOAT_EQ(token_embed[j] + pos_embed[j], out_bt[j]);
@@ -63,14 +66,17 @@ TEST_F(EmbeddingTest, Forward) {
 
 TEST_F(EmbeddingTest, Backward) {
 
+
     size_t maxT = T + 1;
 
     float* grad_ = new float[vocab_size*C + maxT*C]{0};
 
 	Embedding* encoder = new Embedding(nullptr, grad_, C, vocab_size);
+	float* p = (float*)encoder->params;
+	float* g = (float*)encoder->grad;
 
-    float* wte_g = encoder->grad;
-	float* wpe_g = encoder->grad + C*vocab_size;
+    float* wte_g = g;
+	float* wpe_g = g + C*vocab_size;
 
 	// fill output grad with random
     fillArrayWithRandom(out->act_grads, out->size);
