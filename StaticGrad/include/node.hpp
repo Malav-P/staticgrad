@@ -27,6 +27,7 @@ class Activation {
         float* act_grads;
 
         size_t size; // number of elements
+        size_t num_bytes; ///< number of bytes used to hold activations.
         size_t B; // current batch size
         size_t T; // current sequence length
         size_t V; // vocab size

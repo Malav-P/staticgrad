@@ -58,6 +58,8 @@ V(V_)
 
     act = new float[size];
     act_grads = new float[size]; 
+
+    num_bytes = size * sizeof(float);
     
     this->reset();
 }

@@ -159,6 +159,14 @@ void setup_model(GPT2*& model, const bool pretrained){
         std::string fp_weights = PREFIX + "bin/gpt2_weights.bin";
         model->load_weights(fp_weights);
     }
+
+    std::cout << "GPT-2 Small" << std::endl;
+    std::cout << "max seq len: " << model->maxT << std::endl;
+    std::cout << "embedding dimension: " << model->C << std::endl;
+    std::cout << "vocab size: " << model->V << std::endl;
+    std::cout << "num layers: " << model->L << std::endl;
+    std::cout << "num params: " << model->num_params << std::endl;
+    std::cout << "num bytes for model param: " << float(model->num_bytes) / (1 << 20) << " MB" << std::endl;
 }
 
 /**
@@ -228,6 +236,12 @@ void setup_activations(Activation*& activations,
     out = new Node();
     in = new Node();
     activations->point_nodes(out, in);
+
+    std::cout << "allocated batch size: " << B << std::endl;
+    std::cout << "allocated sequence length: " << T << std::endl;
+    std::cout << "num activations: " << activations->size << std::endl;
+    std::cout << "num bytes for activations: " << float(activations->num_bytes) / (1 << 20) << " MB" << std::endl;
+    std::cout << "\n";
 }
 
 /**
@@ -252,6 +266,9 @@ void setup_optimizer(Optimizer*& opt,
             opt = new Adam(model->num_params, &(model->params) , &(model->grad));
             break;
     }
+
+    std::cout << "num bytes for optimizer states: " << float(opt->num_bytes) / (1 << 20) << " MB" << std::endl;
+
 }
 
 
@@ -296,18 +313,6 @@ void setup(GPT2*& model,
     setup_datastream(ds, B*T);
     setup_tokenizer(tk);
     setup_activations(activations, out, in, B, T, model);
-
-
-    std::cout << "GPT-2 Small" << std::endl;
-    std::cout << "max seq len: " << model->maxT << std::endl;
-    std::cout << "embedding dimension: " << model->C << std::endl;
-    std::cout << "vocab size: " << model->V << std::endl;
-    std::cout << "num layers: " << model->L << std::endl;
-    std::cout << "num params: " << model->num_params << std::endl;
-    std::cout << "allocated batch size: " << B << std::endl;
-    std::cout << "allocated sequence length: " << T << std::endl;
-    std::cout << "num activations: " << activations->size << std::endl;
-    std::cout << "\n";
 
 }
 

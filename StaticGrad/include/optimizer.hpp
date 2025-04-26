@@ -11,6 +11,9 @@ class Optimizer {
         void** params_ptr;
         void** grad_ptr;
         float lr;
+        size_t num_bytes; ///< number of bytes for state (gradients, etc.)
+
+
         
         /**
          * 
@@ -26,7 +29,9 @@ class Optimizer {
             num_params(num_params_),
             params_ptr(params_),
             grad_ptr(grad_),
-            lr(lr_) {}
+            lr(lr_) {
+                num_bytes = num_params * sizeof(float);
+            }
 
         /**
          * 
@@ -78,6 +83,7 @@ class Adam : public Optimizer {
         float beta2;
         int t;
 
+
         /**
          * 
          * @brief Adam class constructor
@@ -98,6 +104,8 @@ class Adam : public Optimizer {
         {
             m = new float[num_params]();
             v = new float[num_params]();
+
+            num_bytes = 3 * num_params * sizeof(float); ///< gradients, moments, and velocities
         }
 
         /**
