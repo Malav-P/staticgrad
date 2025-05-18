@@ -33,19 +33,25 @@ make inference
 ```
 
 ## Notes on Speeding Up Inference
-- After first model forward pass, do not recompute activations in the transformer block. The following computations are not redone for previous tokens in the transformer blocks:
-    - **Opt Type 1** : keys, values (KV caching) 
-    - **Opt Type 2** : Linear layer activations
+- After first model forward pass, do not recompute activations in the transformer block for previous tokens. The following computations in the transformer blocks are not redone for previous tokens : 
+    - **Opt Type 1** : Query/Key dot products in attention block
+    - **Opt Type 2** : Linear layer activations. Note that this excludes the unembedding layer since it is not in a transformer block.
     - **Opt Type 3** : GELU activations
     - **Opt Type 4** : Residual connection activations
+    - **Opt Type 5** : Layernorm activations
+    - **Opt Type 6** : Unembedding (Language Modeling Head) activations
+    
 
-- **Opt Type 5** : Use a precomputed table of GELU activations. Specifically, precompute GELU for all possible fp16 values. Since there are 2^16 possible fp16 values, and each fp16 values takes 2 bytes of memory, we need a 2^17 = 128 KB table.
+- **Opt Type 7** : Use a precomputed table of GELU activations. Specifically, precompute GELU for all possible fp16 values. Since there are 2^16 possible fp16 values, and each fp16 values takes 2 bytes of memory, we need a 2^17 = 128 KB table.
 
-| KV Cache   | Linear Layer current token only | GELU current token only   | Residual Connection current token only   | FP16 GELU Table   | ms/token |
-|-----|-----|-----|-----|-----|----------|
-|     |     |     |     |     | 128.167  |
-| ✅  | ✅  |     | ✅  |     | 104.335  |
-| ✅  | ✅  |     | ✅  | ✅  | 79.3699  |
-| ✅  | ✅  | ✅  | ✅  |     | 59.4481  |
-| ✅  | ✅  | ✅  | ✅  | ✅  | 44.6622  |
+| Query/Key Dot Product Activations  | Linear Layer Activations | GELU Activations  | Residual Connection Activations  | Layernorm Activations | Unembedding Activations | FP16 GELU Table | ms/token |
+|-----|-----|-----|-----|-----|-----|-----|----------|
+|     |     |     |     |     || | 414.156 |
+| ✅  |   |     |   |     | || 129.022  |
+| ✅  | ✅  |     |   |   | || 107.245  |
+| ✅  | ✅  | ✅  |   |     | | |61.043  |
+| ✅  | ✅  | ✅  | ✅  |   | || 59.551  |
+| ✅  | ✅  | ✅  | ✅  | ✅  | || 42.749  |
+| ✅  | ✅  | ✅  | ✅  | ✅  |✅ || 40.268  |
+| ✅  | ✅  | ✅  | ✅  | ✅  |✅| ✅ | 25.8835  |
 

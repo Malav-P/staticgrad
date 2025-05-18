@@ -23,8 +23,20 @@ else()
     message(FATAL_ERROR "No suitable C++ compiler found")
 endif()
 
-# Compiler flags
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra -Wall -std=c++14 -fPIC")
+# Base flags
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra -Wall -std=c++14")
+
+# Append to Debug flags
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g -DDEBUG")
+
+# Append to Release flags
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG")
+
+# Append to RelWithDebInfo flags
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O2 -g")
+
+# Append to MinSizeRel flags
+set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} -Os -DNDEBUG")
 
 # Directory locations
 set(REPO_PREFIX "${CMAKE_SOURCE_DIR}/gpt2_python/")
