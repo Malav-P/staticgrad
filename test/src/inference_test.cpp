@@ -1,5 +1,6 @@
 #include "interface.hpp"
 
+
 int main(int argc, char **argv) {
 
     // parse command line args
@@ -30,7 +31,6 @@ int main(int argc, char **argv) {
     setup_tokenizer(tk);
     setup_activations(activations, out, in, B, T, model);
 
-    // autoregressive generation
     yap(model, tk, out, in, start);
 
     // deallocate memory

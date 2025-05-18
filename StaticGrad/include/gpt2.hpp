@@ -28,6 +28,7 @@ class GPT2 : public Operation {
         void clear_kv_cache();
 
         void train_mode();
+        void inference_time_opt(bool flag = true);
 
         const size_t C;    // embedding dimension (default 768)
         const size_t L;    // number of transformer blocks (default 12)

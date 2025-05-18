@@ -4,7 +4,6 @@
 #include "optimizer.hpp"
 #include "interface.hpp"
 #include "utils.hpp"
-#include <deque>
 
 const std::string PREFIX = REPO_PREFIX;
 
@@ -46,6 +45,8 @@ std::string next_token(GPT2*& model,
     
     model->forward(out, in);
 
+    model->inference_time_opt(); // hacky, only need to call this once after initial model forward pass
+
     float* logits = out->act + (t-1)*V;
 
     uint16_t next_tok = sample_token(logits, V, true);
@@ -71,6 +72,8 @@ std::string next_token(GPT2*& model,
  */
 size_t prepare_for_gen(GPT2*& model, Tokenizer*& tk, Node*& in, std::string start){
     model->clear_kv_cache();
+    model->inference_time_opt(false);
+    
     size_t T = in->shape[1];
     size_t t;
     uint16_t eot = 50256;
@@ -117,6 +120,8 @@ void yap(GPT2*& model,
          Node*& in,
          const std::string start){
 
+    auto begin = std::chrono::high_resolution_clock::now();
+
     size_t t = prepare_for_gen(model, tk, in, start);
 
     // autogenerate tokens
@@ -125,8 +130,13 @@ void yap(GPT2*& model,
         std::string next_tok = next_token(model, tk, out, in, i);
         std::cout << next_tok << std::flush;
     }
+    std::cout << std::endl;
     
     model->clear_kv_cache();
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> duration = end - begin;
+    std::cout << "ms/token: " << duration.count() / (out->shape[1] - t) << std::endl;
 }
 
 /**
@@ -160,6 +170,9 @@ void setup_model(GPT2*& model, const bool pretrained){
         model->load_weights(fp_weights);
     }
 
+    // init the table of gelu values
+    init_table_gelu_f16();
+
     std::cout << "GPT-2 Small" << std::endl;
     std::cout << "max seq len: " << model->maxT << std::endl;
     std::cout << "embedding dimension: " << model->C << std::endl;
@@ -167,6 +180,7 @@ void setup_model(GPT2*& model, const bool pretrained){
     std::cout << "num layers: " << model->L << std::endl;
     std::cout << "num params: " << model->num_params << std::endl;
     std::cout << "num bytes for model param: " << float(model->num_bytes) / (1 << 20) << " MB" << std::endl;
+
 }
 
 /**

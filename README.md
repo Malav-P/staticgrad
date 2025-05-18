@@ -42,8 +42,9 @@ make inference
     - **Opt Type 6** : Unembedding (Language Modeling Head) activations
     
 
-- **Opt Type 7** : Use a precomputed table of GELU activations. Specifically, precompute GELU for all possible fp16 values. Since there are 2^16 possible fp16 values, and each fp16 values takes 2 bytes of memory, we need a 2^17 = 128 KB table.
+- **Opt Type 7** : Use a precomputed table of GELU activations. Specifically, precompute GELU for all possible fp16 values. Since there are 2^16 possible fp16 values, and each fp16 value takes 2 bytes of memory, we need a 2^17 = 128 KB table.
 
+The results of each optimization are tested by running `./bin/inference "hello" 200`
 | Query/Key Dot Product Activations  | Linear Layer Activations | GELU Activations  | Residual Connection Activations  | Layernorm Activations | Unembedding Activations | FP16 GELU Table | ms/token |
 |-----|-----|-----|-----|-----|-----|-----|----------|
 |     |     |     |     |     || | 414.156 |

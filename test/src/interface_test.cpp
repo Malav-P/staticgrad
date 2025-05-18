@@ -60,8 +60,11 @@ TEST_F(SetupTeardownTest, helloworld) {
 
     in->act[0] = 31373;
     in->act[1] = 995;
-    in->current_T = 2;
+    in->current_T = 1;
 
+    model->forward(out, in);
+    in->current_T = 2;
+    model->inference_time_opt();
     model->forward(out, in);
     float* logits = out->act + (model->V);
 
@@ -74,7 +77,7 @@ TEST_F(SetupTeardownTest, helloworld) {
     float* data = new float[num_floats];
     // Read binary data into the allocated memory
     if (file.read(reinterpret_cast<char*>(data), size)) {
-        for (size_t i = 0; i < model->C; i++){
+        for (size_t i = 0; i < model->V; i++){
             EXPECT_NEAR(logits[i], data[i], 1e-3);
         }
         

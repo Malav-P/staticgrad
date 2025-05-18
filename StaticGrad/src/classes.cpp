@@ -1,6 +1,6 @@
 #include "classes.hpp"
 #include <cmath>
-#include <cfloat>
+#include <cfloat> // for FLT_MAX
 #include <cstring>
 #include <stdexcept>
 #include <iostream>
@@ -10,6 +10,20 @@
 #else
 #include <cblas.h>
 #endif
+
+fp16_t table_gelu_f16[1 << 16];
+
+void init_table_gelu_f16(){
+    for (int i = 0; i < (1 << 16); i++){
+        union {
+            uint16_t u16;
+            fp16_t   fp16;
+        } u = {(uint16_t)i};
+
+        float f = compute_fp16_to_fp32(u.fp16);
+        table_gelu_f16[i] = compute_fp32_to_fp16(gelu_f32(f));
+    }
+}
 
 
 /**
@@ -91,7 +105,6 @@ void Embedding::forward(Node* out, Node* in){
     size_t T = in->shape[1];
 
     size_t current_T = in->current_T;
-
 
     float* wte = (float*)params;
     float* wpe = ((float*)params) + C * vocab_size;
@@ -286,14 +299,13 @@ void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
     res1_node->act_grads = in->act_grads;
     res1_node->shape = in->shape;
     res1_node->size = in->size;
+    res1_node->current_T = in->current_T;
 
     input->act = in->act;
     input->act_grads = in->act_grads;
     input->shape = in->shape;
     input->size = in->size;
     input->current_T = in->current_T;
-
-
 
     output->act = input->act + B * T * C;
     output->act_grads = input->act_grads + B * T * C;
@@ -324,6 +336,7 @@ void TransformerBlock::forward(Node* out, Node* in){   // (B, T, C) -> (B, T, C)
     res2_node->act_grads = output->act_grads;
     res2_node->shape = output->shape;
     res2_node->size = output->size;
+    res2_node->current_T = output->current_T;
 
     // second layer norm
     shift(output, input, {B, T, C});
@@ -481,7 +494,7 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
     else { // kv cache does not exist (this should always be the case during training)
         start = 0;
         buffer = new float[2*half_buffer_size];
-    }    
+    }   
     
     for (size_t b = 0 ; b < B; b++){
 
@@ -536,10 +549,10 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
 
 
                 // get output vector
-                float* out_act = out->act + b * T * C + t * C + h * head_size;
+                float* output = out->act + b * T * C + t * C + h * head_size;
                 // zero the output
                 for (size_t i = 0; i < head_size; i++){
-                    out_act[i] = 0.0f;
+                    output[i] = 0.0f;
                 }
 
                 // accumulate weighted scores from tokens
@@ -548,7 +561,7 @@ void Attention::forward(Node* out, Node* in){ // (B, T, 3C) -> (B, T, C)
                     float* v_t2 = in->act + b * T * 3*C + t2 * 3*C + C + C + h * head_size;
 
                     for (size_t i=0; i < head_size; i++){
-                        out_act[i] += post_softmax_bth[t2] * v_t2[i];
+                        output[i] += post_softmax_bth[t2] * v_t2[i];
                     }
                 }
             }
@@ -665,14 +678,37 @@ void Attention::backward(Node* out, Node* in) {
  * @param out Pointer to the output node.
  * @param in Pointer to the input node.
  */
+
 void GELU::forward(Node* out, Node* in) {
-    size_t numel = in->size;
 
-    float x;
+    size_t B = in->shape[0];
+    size_t T = in->shape[1];
+    size_t C = in->shape[2];
 
-    for (size_t i = 0; i < numel; i++){
-        x = in->act[i];
-        out->act[i] = 0.5f * x * (1 + tanhf( sqrtf(2.0f/M_PI) * (x + 0.044715f * x * x * x)));
+    size_t current_T = in->current_T;
+    size_t start = inference_time_opt ? current_T - 1 : 0;
+
+    for (size_t b = 0; b < B; b++){
+        for (size_t t = start; t < T; t++){
+            float* output = out->act + b*T*C + t*C;
+            float* input  = in->act  + b*T*C + t*C;
+            for (size_t i = 0; i < C; i++){
+                if (input[i] <= -10.0f){
+                    output[i] = 0.0f;
+                }
+                else if (input[i] >= 10.0f)
+                {
+                    output[i] = input[i];
+                }
+                else{
+                    fp16_t h = compute_fp32_to_fp16(input[i]);
+                    memcpy(&t, &h, sizeof(uint16_t));
+                    output[i] = compute_fp16_to_fp32(table_gelu_f16[t]);
+                } 
+
+                // output[i] = gelu_f32(input[i]);
+            }
+        }
     }
 }
 
@@ -732,31 +768,37 @@ void LayerNorm::forward(Node* out, Node* in) { // (B, T, C) -> (B, T, C)
         size = B*T;
     }
 
-    if (!(m && B*T <= size)){
-        delete[] m;
-        m = new float[B*T];
+    if (!(means && B*T <= size)){
+        delete[] means;
+        means = new float[B*T];
         size = B*T;
     }
 
 
     float eps = 1e-5; // division by zero prevention during normalization
+    float m_;
+    float v;
+    float* w_ = (float*)params;
+    float* b_ = ((float*)params)+C;
 
+    size_t start = inference_time_opt ? current_T - 1 : 0;
 
     for (size_t b = 0; b < B; b++){
-        for (size_t t = 0; t < current_T; t++){
-            float* inp = in->act + b*T*C + t*C;
-            float m_ = 0.0f;
+        for (size_t t = start; t < current_T; t++){
+            float* input = in->act +   b*T*C + t*C;
+            float* output = out->act + b*T*C + t*C;
+            m_ = 0.0f;
+            v = 0.0f;
 
             // calculate mean
             for (size_t i = 0; i < C; i++){
-                m_ += inp[i];
+                m_ += input[i];
             }
             m_ = m_/C;
 
             // calculate var
-            float v = 0.0f;
             for (size_t i = 0 ; i < C; i++){
-                float dev = inp[i] - m_;
+                float dev = input[i] - m_;
                 v += dev*dev;
             }
             v = v/C;
@@ -766,19 +808,16 @@ void LayerNorm::forward(Node* out, Node* in) { // (B, T, C) -> (B, T, C)
             }
 
             // write to output
-            float* out_ = out->act + b*T*C + t*C;
             float rstd_ = 1.0f / sqrtf(v+ eps);
-            float* w_ = (float*)params;
-            float* b_ = ((float*)params)+C;
 
             for (size_t i = 0; i < C; i++){
-                float norm_inp = rstd_* (inp[i] - m_);
-                out_[i] = norm_inp * w_[i] + b_[i];
+                float norm_input = rstd_* (input[i] - m_);
+                output[i] = norm_input * w_[i] + b_[i];
             }
 
             // store rstd_ and m_ for backward pass
             rstd[b * T + t] = rstd_;
-            m[b * T + t] = m_;
+            means[b * T + t] = m_;
 
         }
     }
@@ -810,11 +849,11 @@ void LayerNorm::backward(Node* out, Node* in){
     for (size_t b = 0; b < B; b++){
         for (size_t t = 0; t < T; t++){
             float* out_g = out->act_grads + b*T*C + t*C;
-            float* in_g = in->act_grads + b*T*C + t*C;
-            float* inp = in->act + b*T*C + t*C;
+            float* in_g = in->act_grads +   b*T*C + t*C;
+            float* inp = in->act +          b*T*C + t*C;
 
 
-            float m_ = m[b*T + t];
+            float m_ = means[b*T + t];
             float rstd_ = rstd[b*T + t];
 
             // first pass to store some useful values.
@@ -877,7 +916,7 @@ void Matmul::forward(Node* out, Node* in) {
     float alpha = multiplier, beta = 0.0f;
     float* B_ = (float*)params;
 
-    int M = current_T; // rows of A and C
+    int M = inference_time_opt? 1 : current_T; // rows of A and C
     int N = OC; // columns of B and C
     int K = C; // columns of A and rows of B
 
@@ -888,17 +927,19 @@ void Matmul::forward(Node* out, Node* in) {
 
     for (size_t b = 0; b < B; b++){
 
-        float* A = in->act + b * T * C;
-        float* out_ = out->act + b * (T) * (OC);
+        float* A = in->act + b * T * C + (inference_time_opt ? (current_T - 1) * C : 0);
+        float* out_ = out->act + b * T * OC + (inference_time_opt ? (current_T - 1) * OC : 0);
 
         cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                     M, N, K, alpha, A, lda, B_, ldb, beta, out_, ldc);
         
         if (bias){
+            size_t start = inference_time_opt ? current_T - 1 : 0;
             float* param_b = ((float*)params) + C*OC;
-            for (size_t t = 0; t < current_T; t++){
+            for (size_t t = start; t < current_T; t++){
+                float* output = out->act + b * T * OC + t * OC;
                 for (size_t c = 0; c < OC; c++){
-                    out_[t*OC + c] += param_b[c];
+                    output[c] += param_b[c];
                 }
             }
         }
@@ -911,7 +952,7 @@ void Matmul::forward(Node* out, Node* in) {
 
 
 /**
- * @brief Computes the forward pass of matrix multiplication assuming the weights are given tranposed.
+ * @brief Computes the forward pass of matrix multiplication assuming the weights are given transposed.
  *
  * This method performs a matrix multiplication operation on the input node's
  * activation values and the layer's parameters, storing the result in the output
@@ -939,7 +980,7 @@ void Matmul::forward2(Node* out, Node* in) {
     float alpha = multiplier, beta = 0.0f;
     float* B_ = (float*)params;
 
-    int M = current_T; // rows of A and C
+    int M = inference_time_opt? 1 : current_T; // rows of A and C
     int N = OC; // columns of trans(B) and C
     int K = C; // columns of A and rows of B
 
@@ -950,17 +991,19 @@ void Matmul::forward2(Node* out, Node* in) {
 
     for (size_t b = 0; b < B; b++){
 
-        float* A = in->act + b * T * C;
-        float* C_ = out->act + b * (T) * (OC);
+        float* A = in->act + b * T * C + (inference_time_opt ? (current_T - 1) * C : 0);
+        float* C_ = out->act + b * (T) * (OC) + (inference_time_opt ? (current_T - 1) * OC : 0);
 
         cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
                     M, N, K, alpha, A, lda, B_, ldb, beta, C_, ldc);
 
         if (bias){
+            size_t start = inference_time_opt ? current_T - 1 : 0;
             float* param_b = ((float*)params) + C*OC;
-            for (size_t t = 0; t < current_T; t++){
+            for (size_t t = start; t < current_T; t++){
+                float* output = out->act + b * T * OC + t * OC;
                 for (size_t c = 0; c < OC; c++){
-                    C_[t*OC + c] += param_b[c];
+                    output[c] += param_b[c];
                 }
             }
         }
@@ -1108,10 +1151,21 @@ void Add::forward(Node* out, Node* in){
         throw std::invalid_argument("sizes of input and output arrays unequal");
     }
 
-    size_t numel = in->size;
+    size_t B = in->shape[0];
+    size_t T = in->shape[1];
+    size_t C = in->shape[2];
 
-    for (size_t i = 0; i < numel; i++){
-        out->act[i] += in->act[i];
+    size_t current_T = in->current_T;
+    size_t start = inference_time_opt ? current_T - 1 : 0;
+
+    for (size_t b = 0; b < B; b++){
+        for (size_t t = start; t < T; t++){
+            float* output = out->act + b*T*C + t*C;
+            float* input  = in->act  + b*T*C + t*C;
+            for (size_t c = 0; c < C; c++){
+                output[c] += input[c];
+            }
+        }
     }
 
 }

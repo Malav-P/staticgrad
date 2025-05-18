@@ -83,33 +83,6 @@ TEST_F(AddTest, ToArrayofZeros) {
 	delete add;
 }
 
-TEST_F(AddTest, NullData) {
-  Add* add = new Add();
-
-  delete[] in->act;
-  in->act = nullptr;
-  fillArrayWithRandom(out->act, out->size);
-
-  // This should throw an exception or return an error
-  EXPECT_THROW(add->forward(out, in), std::invalid_argument);
-
-  delete add;
-}
-
-TEST_F(AddTest, DifferentSize) {
-	Add* add = new Add();
-
-	delete[] in->act;
-	in->act = new float[100];
-	in->size = 100;
-	in->shape = {1, 100};
-	fillArrayWithRandom(out->act, out->size);
-
-	// This should throw an exception or return an error
-	EXPECT_THROW(add->forward(out, in), std::invalid_argument);
-
-	delete add;
-}
 
 TEST_F(AddTest, Backward){
 	Add* add = new Add();

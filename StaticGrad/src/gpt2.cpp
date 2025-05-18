@@ -187,6 +187,27 @@ void GPT2::train_mode(){
     if (g - (char*)grad != static_cast<int>(num_bytes)){
         throw std::runtime_error("gradient allocation incorrect");
     }
+
+    inference_time_opt(false);
+}
+
+void GPT2::inference_time_opt(bool flag){
+    for (auto& tblock : tblocks){
+        tblock->mat1->inference_time_opt = flag;
+        tblock->mat2->inference_time_opt = flag;
+        tblock->mat3->inference_time_opt = flag;
+        tblock->mat4->inference_time_opt = flag; // linear layers
+
+        tblock->res1->inference_time_opt = flag;
+        tblock->res2->inference_time_opt = flag; // residual connections
+
+        tblock->gelu->inference_time_opt = flag; // gelu 
+
+        tblock->ln1->inference_time_opt = flag;
+        tblock->ln2->inference_time_opt = flag; // layernorms
+    } 
+
+    unembedding->inference_time_opt = flag; // unembedding
 }
 
 /**

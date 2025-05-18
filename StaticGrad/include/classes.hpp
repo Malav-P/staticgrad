@@ -2,6 +2,35 @@
 #define CLASSES_HPP
 
 #include "node.hpp"
+#include <cstdint>
+
+
+typedef uint16_t fp16_t;
+
+// precomputed gelu table for f16 (128 KB)
+extern fp16_t table_gelu_f16[1 << 16];
+
+static const float GELU_COEF_A     = 0.044715f;
+static const float SQRT_2_OVER_PI  = 0.79788456080286535587989211986876f;
+
+inline static float gelu_f32(float x) {
+    return 0.5f*x*(1.0f + tanhf(SQRT_2_OVER_PI*x*(1.0f + GELU_COEF_A*x*x)));
+}
+
+static inline fp16_t compute_fp32_to_fp16(float f) {
+    fp16_t res;
+    __fp16 tmp = f;
+    memcpy(&res, &tmp, sizeof(uint16_t));
+    return res;
+}
+
+static inline float compute_fp16_to_fp32(fp16_t h) {
+    __fp16 tmp;
+    memcpy(&tmp, &h, sizeof(uint16_t));
+    return (float)tmp;
+}
+
+void init_table_gelu_f16(void);
 
 
 void shift(Node* out, Node* in, const std::vector<size_t> shape_);
@@ -47,9 +76,11 @@ class Embedding: public Operation {
 
 class GELU : public Operation {
     public :
+        bool inference_time_opt;
 
         GELU():
-            Operation(nullptr, nullptr){}
+            Operation(nullptr, nullptr),
+            inference_time_opt(false){}
 
         void forward(Node* out, Node* in) override;
         void backward(Node* out, Node* in) override;
@@ -59,15 +90,17 @@ class LayerNorm : public Operation {
     public:
 
         float* rstd;
-        float* m;
+        float* means;
         size_t size;
+        bool inference_time_opt;
     
 
         LayerNorm(void* params_, void* grad_):
         Operation(params_, grad_),
         rstd(nullptr),
-        m(nullptr),
-        size(0){}
+        means(nullptr),
+        size(0),
+        inference_time_opt(false){}
 
         void forward(Node* out, Node* in) override;
         void backward(Node* out, Node* in) override;
@@ -75,7 +108,7 @@ class LayerNorm : public Operation {
 
         ~LayerNorm(){
             delete[] rstd;
-            delete[] m;
+            delete[] means;
         }
 };
 
@@ -83,11 +116,13 @@ class Matmul : public Operation {
     public :
         float multiplier;
         bool bias;
+        bool inference_time_opt;
         
-        Matmul(void* params_, void* grad_, float multiplier_ = 1.0, bool bias_ = true):
+        Matmul(void* params_, void* grad_, float multiplier_ = 1.0, bool bias_ = true, bool inference_time_opt_ = false):
             Operation(params_, grad_),
             multiplier(multiplier_),
-            bias(bias_){}
+            bias(bias_),
+            inference_time_opt(inference_time_opt_){}
         
         void forward(Node* out, Node* in) override;
         void backward(Node* out, Node* in) override;
@@ -124,9 +159,10 @@ class Attention : public Operation {
 
 class Add : public Operation {
     public :
-
+        bool inference_time_opt;
         Add():
-            Operation(nullptr, nullptr){}
+            Operation(nullptr, nullptr),
+            inference_time_opt(false){}
         
         void forward(Node* out, Node* in) override;
         void backward(Node* out, Node* in) override;

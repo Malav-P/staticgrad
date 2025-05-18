@@ -114,7 +114,7 @@ TEST_F(LayerNormTest, ScaleShift) {
 
   // Check that the output values are scaled and shifted correctly
   for (size_t i = 0; i < C; i++) {
-    float expected = p[i] * (layer_norm->rstd[0])*(in->act[i] - layer_norm->m[0]) + p[i + C];
+    float expected = p[i] * (layer_norm->rstd[0])*(in->act[i] - layer_norm->means[0]) + p[i + C];
     EXPECT_NEAR(out->act[i], expected, 1e-5);
   }
 }
@@ -157,7 +157,7 @@ TEST_F(LayerNormTest, Backward){
 		float expected = 0.0f;
 		for (size_t b = 0; b < B; b++){
 			for (size_t t = 0; t < T; t++){
-				expected += out->act_grads[b*T*C + t*C + i] * (in->act[b*T*C + t*C + i] - layer_norm->m[b*T + t]) * layer_norm->rstd[b*T + t];
+				expected += out->act_grads[b*T*C + t*C + i] * (in->act[b*T*C + t*C + i] - layer_norm->means[b*T + t]) * layer_norm->rstd[b*T + t];
 			}
 		}
 		EXPECT_FLOAT_EQ(g[i], expected);
