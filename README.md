@@ -41,10 +41,11 @@ make inference
 
 - **Opt Type 5** : Use a precomputed table of GELU activations. Specifically, precompute GELU for all possible fp16 values. Since there are 2^16 possible fp16 values, and each fp16 values takes 2 bytes of memory, we need a 2^17 = 128 KB table.
 
-| Opt Type | ms/token |
-|----------|----------|
-| None   | 128.167    |
-| 1, 2, & 4    | 104.335   |
-| 1, 2, 4, & 5  | 79.3699   |
-| 1, 2, 3, & 4    | 59.4481    |
-| 1, 2, 3, 4, & 5   | 44.6622    |
+| KV Cache   | Linear Layer current token only | GELU current token only   | Residual Connection current token only   | FP16 GELU Table   | ms/token |
+|-----|-----|-----|-----|-----|----------|
+|     |     |     |     |     | 128.167  |
+| ✅  | ✅  |     | ✅  |     | 104.335  |
+| ✅  | ✅  |     | ✅  | ✅  | 79.3699  |
+| ✅  | ✅  | ✅  | ✅  |     | 59.4481  |
+| ✅  | ✅  | ✅  | ✅  | ✅  | 44.6622  |
+
