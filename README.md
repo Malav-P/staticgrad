@@ -8,7 +8,7 @@ This repository contains an implementation of the GPT2 architecture from scratch
 git clone https://github.com/Malav-P/staticgrad.git
 cd staticgrad
 mkdir build && cd build
-cmake ..
+cmake .. -DBUILD_TESTING=OFF # set to ON to build tests
 make install # optional, for downstream users who want to use StaticGrad libary
 ```
 
@@ -31,3 +31,20 @@ cd build
 make inference
 ./bin/inference <your starting text> <seq len> # keep at ~100 tokens for reasonable inference speed
 ```
+
+## Notes on Speeding Up Inference
+- After first model forward pass, do not recompute activations in the transformer block. The following computations are not redone for previous tokens in the transformer blocks:
+    - **Opt Type 1** : keys, values (KV caching) 
+    - **Opt Type 2** : Linear layer activations
+    - **Opt Type 3** : GELU activations
+    - **Opt Type 4** : Residual connection activations
+
+- **Opt Type 5** : Use a precomputed table of GELU activations. Specifically, precompute GELU for all possible fp16 values. Since there are 2^16 possible fp16 values, and each fp16 values takes 2 bytes of memory, we need a 2^17 = 128 KB table.
+
+| Opt Type | ms/token |
+|----------|----------|
+| None   | 128.167    |
+| 1, 2, & 4    | 104.335   |
+| 1, 2, 4, & 5  | 79.3699   |
+| 1, 2, 3, & 4    | 59.4481    |
+| 1, 2, 3, 4, & 5   | 44.6622    |
