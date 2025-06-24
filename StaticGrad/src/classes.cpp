@@ -689,25 +689,15 @@ void GELU::forward(Node* out, Node* in) {
     size_t start = inference_time_opt ? current_T - 1 : 0;
 
     for (size_t b = 0; b < B; b++){
-        for (size_t t = start; t < T; t++){
+        for (size_t t = start; t < current_T; t++){
             float* output = out->act + b*T*C + t*C;
             float* input  = in->act  + b*T*C + t*C;
-            for (size_t i = 0; i < C; i++){
-                if (input[i] <= -10.0f){
-                    output[i] = 0.0f;
-                }
-                else if (input[i] >= 10.0f)
-                {
-                    output[i] = input[i];
-                }
-                else{
-                    fp16_t h = compute_fp32_to_fp16(input[i]);
-                    memcpy(&t, &h, sizeof(uint16_t));
-                    output[i] = compute_fp16_to_fp32(table_gelu_f16[t]);
-                } 
 
-                // output[i] = gelu_f32(input[i]);
-            }
+            vec_gelu_fp32(C, input, output);
+            
+            // vec_gelu_fp32_use_fp16(C, input, output);
+
+            
         }
     }
 }

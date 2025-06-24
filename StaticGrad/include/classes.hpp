@@ -17,17 +17,41 @@ inline static float gelu_f32(float x) {
     return 0.5f*x*(1.0f + tanhf(SQRT_2_OVER_PI*x*(1.0f + GELU_COEF_A*x*x)));
 }
 
-static inline fp16_t compute_fp32_to_fp16(float f) {
+inline static fp16_t compute_fp32_to_fp16(float f) {
     fp16_t res;
     __fp16 tmp = f;
     memcpy(&res, &tmp, sizeof(uint16_t));
     return res;
 }
 
-static inline float compute_fp16_to_fp32(fp16_t h) {
+inline static float compute_fp16_to_fp32(fp16_t h) {
     __fp16 tmp;
     memcpy(&tmp, &h, sizeof(uint16_t));
     return (float)tmp;
+}
+
+inline static void vec_gelu_fp32(const int c, float* x, float* y) {
+    for (int i = 0; i < c; i++){
+        y[i] = gelu_f32(x[i]);
+    }
+}
+
+inline static void vec_gelu_fp32_use_fp16(const int c, float* x, float* y) {
+    uint16_t idx;
+    for (int i = 0; i < c; i++){
+        if (x[i] <= -10.0f){
+            y[i] = 0.0f;
+        }
+        else if (x[i] >= 10.0f)
+        {
+            y[i] = x[i];
+        }
+        else{
+            fp16_t h = compute_fp32_to_fp16(x[i]);
+            memcpy(&idx, &h, sizeof(uint16_t));
+            y[i] = compute_fp16_to_fp32(table_gelu_f16[idx]);
+        } 
+    }
 }
 
 void init_table_gelu_f16(void);

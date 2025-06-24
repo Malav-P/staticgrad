@@ -48,11 +48,11 @@ The results of each optimization are tested by running `./bin/inference "hello" 
 | Query/Key Dot Product Activations  | Linear Layer Activations | GELU Activations  | Residual Connection Activations  | Layernorm Activations | Unembedding Activations | FP16 GELU Table | ms/token |
 |-----|-----|-----|-----|-----|-----|-----|----------|
 |     |     |     |     |     || | 414.156 |
-| ✅  |   |     |   |     | || 129.022  |
-| ✅  | ✅  |     |   |   | || 107.245  |
-| ✅  | ✅  | ✅  |   |     | | |61.043  |
-| ✅  | ✅  | ✅  | ✅  |   | || 59.551  |
-| ✅  | ✅  | ✅  | ✅  | ✅  | || 42.749  |
-| ✅  | ✅  | ✅  | ✅  | ✅  |✅ || 40.268  |
-| ✅  | ✅  | ✅  | ✅  | ✅  |✅| ✅ | 25.8835  |
+| ✅  |   |     |   |     | || 118.440  |
+| ✅  | ✅  |     |   |   | || 97.353  |
+| ✅  | ✅  | ✅  |   |     | | |47.386  |
+| ✅  | ✅  | ✅  | ✅  |   | || 45.841  |
+| ✅  | ✅  | ✅  | ✅  | ✅  | || 28.220  |
+| ✅  | ✅  | ✅  | ✅  | ✅  |✅ || 26.324  |
+| ✅  | ✅  | ✅  | ✅  | ✅  |✅| ✅ | 25.847  |
 
